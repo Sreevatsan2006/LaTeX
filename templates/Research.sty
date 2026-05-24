@@ -1,0 +1,1914 @@
+% ------------------------------------------------------------------------------
+% 1) HOW TO USE
+% ------------------------------------------------------------------------------
+
+%   What this package is for:
+% - You add one \usepackage line, and a standard math document instantly gets
+%   better defaults: cleaner typography, theorem framing, callouts, useful
+%   macros, and better hyperlink styling.
+% - It is built to work with normal AMS-style writing, but it is not limited to
+%   one class. It is suitable for article/report/book class workflows.
+%
+
+% Put this in your preamble:
+%
+%   \usepackage[palatino]{Math}
+%
+% That is enough to start.
+%
+% Available font options:
+%   \usepackage[classic]{Math}   % Computer Modern
+%   \usepackage[charter]{Math}   % Charter
+%   \usepackage[palatino]{Math}  % Palatino (default)
+%
+% ------------------------------------------------------------------------------
+% 2) WHAT MATH.STY ALREADY LOADS FOR YOU
+% ------------------------------------------------------------------------------
+%
+% This package already loads core tools:
+% - amsmath, amssymb, amsthm, mathtools
+% - hyperref + cleveref for references
+% - biblatex with biber for bibliography management
+% - xcolor, geometry, enumitem, fancyhdr, mdframed, microtype
+% - graphicx, float, booktabs, tabularx, array, multirow
+% - bm, bbm, mathrsfs for bold symbols / indicator notation / script letters
+%
+% - Since this is intended as a one-shot default package, avoid re-importing
+%   the same packages in each document unless you need special options.
+% - If your existing file already loads some of these, duplicates are usually
+%   harmless but unnecessary. 
+%
+% Bibliographies use biblatex/biber by default:
+%
+%   \addbibresource{references.bib}
+%   ...
+%   \printbibliography
+%
+% ------------------------------------------------------------------------------
+% 3) COLOR MODE (HOW MUCH VISUAL STYLING YOU WANT)
+% ------------------------------------------------------------------------------
+%
+% Choose one mode either as a package option or in the preamble after loading:
+%
+%   \usepackage[none]{Math}
+%
+%   \MathColorMode{none}      % lean/plain theorem mode, no automatic boxes
+%   \MathColorMode{minimal}   % very light accents
+%   \MathColorMode{balanced}  % default, moderate structure cues
+%   \MathColorMode{rich}      % strongest visual accents
+%
+% If you only want fonts/spacing/macros with almost no visual chrome, use:
+%   \MathColorMode{none}
+%
+% In `none` mode, theorem-like environments are left as plain amsthm blocks.
+% Manual boxes such as `plainbox`, `generalbox`, and `gbox` remain available.
+%
+% ------------------------------------------------------------------------------
+% 4) DROP-IN COMPATIBILITY WITH EXISTING FILES
+% ------------------------------------------------------------------------------
+%
+% Theorem environments in this package are defined conditionally.
+% Meaning:
+% - If your file ALREADY defines `theorem` (or lemma/definition/etc), Math.sty
+%   will not redefine that environment.
+% - If an environment is missing, Math.sty provides it.
+%
+% This lets old files keep their custom theorem setup while new files get defaults automatically.
+%
+% ==============================================================================
+% General-purpose template for mathematical writing.
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{Math}
+
+
+% Package options
+
+% `notikz`:
+%   Do not load TikZ. Useful for faster compiles if you are not drawing figures.
+\newif\ifMath@tikz
+\Math@tikztrue
+\DeclareOption{notikz}{\Math@tikzfalse}
+
+% Starred section behavior:
+% - By default, starred sections/subsections keep standard LaTeX behavior.
+% - `structuredsections` preserves the older Math.sty behavior where starred
+%   section commands advance counters and are inserted into the table of contents.
+% - `standardsections` remains accepted as a compatibility no-op.
+\newif\ifMath@structuredsections
+\Math@structuredsectionsfalse
+\DeclareOption{structuredsections}{\Math@structuredsectionstrue}
+\DeclareOption{standardsections}{\Math@structuredsectionsfalse}
+
+% Font options
+% `classic`  -> default Computer Modern text look
+% `charter`  -> Charter text
+% `palatino` -> Palatino text (default)
+\def\Math@font{palatino}
+\DeclareOption{classic}{\def\Math@font{classic}}
+\DeclareOption{charter}{\def\Math@font{charter}}
+\DeclareOption{palatino}{\def\Math@font{palatino}}
+
+% Initial color mode options.
+% These mirror the public \MathColorMode{...} command for users who prefer:
+%   \usepackage[none]{Math}
+\def\Math@colormode{balanced}
+\DeclareOption{none}{\def\Math@colormode{none}}
+\DeclareOption{minimal}{\def\Math@colormode{minimal}}
+\DeclareOption{balanced}{\def\Math@colormode{balanced}}
+\DeclareOption{rich}{\def\Math@colormode{rich}}
+
+
+\ProcessOptions\relax
+
+% Core packages
+% This block is intentionally broad so Math.sty can be used as a one-shot
+% default import for common mathematical writing workflows.
+%
+% Project-local customization note:
+% If a project needs different package-level options, edit the optional
+% arguments on these \RequirePackage lines in that project's local Math.sty.
+% Examples: geometry paper size/margins, xcolor palettes, hyperref behavior.
+\RequirePackage{amsmath,amssymb,amsthm}
+\RequirePackage{mathtools}
+\RequirePackage{xcolor}
+\RequirePackage[expansion=false]{microtype}
+\RequirePackage[letterpaper,margin=1in]{geometry}
+\RequirePackage{graphicx}
+\RequirePackage{array}
+\RequirePackage{booktabs}
+\RequirePackage{tabularx}
+\RequirePackage{multirow}
+\RequirePackage{float}
+\RequirePackage{bm}
+\RequirePackage{bbm}
+\RequirePackage{mathrsfs}
+\RequirePackage{etoolbox}
+\RequirePackage{aliascnt}
+\RequirePackage{mdframed}
+\RequirePackage{xparse}
+\RequirePackage{needspace}
+\RequirePackage[shortlabels]{enumitem}
+\RequirePackage{fancyhdr}
+
+% Font selection
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\ifdefstring{\Math@font}{classic}{}{%
+  \ifdefstring{\Math@font}{charter}{%
+    \RequirePackage{charter}%
+  }{%
+    \RequirePackage{mathpazo}%
+  }%
+}
+
+\RequirePackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=nyt,
+  maxbibnames=99,
+  maxcitenames=3,
+  giveninits=true,
+  doi=false,
+  isbn=false,
+  url=false,
+  natbib=true
+]{biblatex}
+\RequirePackage{hyperref}
+\RequirePackage[nameinlink,noabbrev]{cleveref}
+
+% Global text flow defaults:
+
+% Line spacing slightly increased increase for better readability
+\linespread{1.03}
+% Paper-style paragraphs: indentation separates paragraphs, not extra vertical gaps.
+\setlength{\parindent}{1.5em}
+\setlength{\parskip}{0pt}
+% Emergency stretch to reduce overfull lines.
+\setlength{\emergencystretch}{2em}
+
+% AMS-style front matter for article-like research reports.
+% Keeps the familiar \title, \author, \date, \maketitle, and abstract interface.
+\providecommand{\Math@ResearchDateFootnote}{%
+  \ifstrempty{\@date}{}{%
+    \begingroup
+      \renewcommand{\thefootnote}{}%
+      \renewcommand{\theHfootnote}{researchdate}%
+      \begin{NoHyper}%
+        \footnotetext{\textit{Date:} \@date.}%
+      \end{NoHyper}%
+    \endgroup
+  }%
+}
+
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \thispagestyle{plain}%
+    \begin{center}%
+      {\Large\bfseries\MakeUppercase{\@title}\par}%
+      \vskip 1.7em%
+      {\normalsize\scshape
+        \begin{tabular}[t]{c}%
+          \@author
+        \end{tabular}\par}%
+    \end{center}%
+    \vskip 1.5em%
+    \Math@ResearchDateFootnote
+  \endgroup
+}
+
+\ifcsdef{abstract}{%
+  \RenewDocumentEnvironment{abstract}{+b}{%
+    \par\vspace{0.6em}%
+    \begin{center}%
+      \begin{minipage}{0.88\textwidth}%
+        \small\noindent\textsc{Abstract.}\enspace #1%
+      \end{minipage}%
+    \end{center}%
+    \vspace{1.0em}%
+  }{}%
+}{%
+  \NewDocumentEnvironment{abstract}{+b}{%
+    \par\vspace{0.6em}%
+    \begin{center}%
+      \begin{minipage}{0.88\textwidth}%
+        \small\noindent\textsc{Abstract.}\enspace #1%
+      \end{minipage}%
+    \end{center}%
+    \vspace{1.0em}%
+  }{}%
+}
+
+
+% TikZ integration:
+% 1) By default, TikZ is ON in this template, so diagrams work immediately.
+% 2) If a document does not need figures, the user can load:
+%    \usepackage[notikz]{Math}
+%    which flips \ifMath@tikz to false and skips this block.
+% 3) Skipping TikZ can noticeably speed up compile time in text-heavy notes.
+% 4) The `positioning` library is loaded so node placement like
+%      right=of A, below=of B
+%    works out of the box without extra user configuration.
+\ifMath@tikz
+  \RequirePackage{tikz}
+  \usetikzlibrary{positioning}
+\fi
+
+% Color palette
+
+% Common colors
+\definecolor{Blue}{HTML}{1D3557}
+\definecolor{LightBlue}{HTML}{A8DADC}
+\definecolor{Teal}{HTML}{2A9D8F}
+\definecolor{Orange}{HTML}{E76F51}
+\definecolor{Green}{HTML}{2E7D32}
+\definecolor{Red}{HTML}{C62828}
+\definecolor{Yellow}{HTML}{F4B400}
+\definecolor{Purple}{HTML}{6D28D9}
+\definecolor{Pink}{HTML}{EC4899}
+\definecolor{Brown}{HTML}{8D6E63}
+\definecolor{Cyan}{HTML}{06B6D4}
+% Neutrals
+\definecolor{Ink}{HTML}{111827}
+\definecolor{Slate}{HTML}{334155}
+\definecolor{Steel}{HTML}{64748B}
+\definecolor{Paper}{HTML}{F8FAFC}
+% Cool accents
+\definecolor{Navy}{HTML}{0B2545}
+\definecolor{Cobalt}{HTML}{2563EB}
+\definecolor{Indigo}{HTML}{4F46E5}
+\definecolor{Violet}{HTML}{7C3AED}
+% Green/teal accents
+\definecolor{DeepTeal}{HTML}{0F766E}
+\definecolor{Forest}{HTML}{166534}
+\definecolor{Emerald}{HTML}{10B981}
+% Warm accents
+\definecolor{Amber}{HTML}{F59E0B}
+\definecolor{Gold}{HTML}{D4A017}
+\definecolor{Coral}{HTML}{FB7185}
+\definecolor{Rose}{HTML}{E11D48}
+\definecolor{Burgundy}{HTML}{7F1D1D}
+% Semantic backgrounds for gentle callouts
+\definecolor{InfoBg}{HTML}{EFF6FF}
+\definecolor{SuccessBg}{HTML}{ECFEF3}
+\definecolor{WarningBg}{HTML}{FFF7E6}
+\definecolor{DangerBg}{HTML}{FEF2F2}
+\definecolor{HighlightBg}{HTML}{FFFDEB}
+
+
+
+
+% ------------------------------------------------------------------
+% Color mode engine (user-facing customization layer)
+% ------------------------------------------------------------------
+% What this block controls:
+% 1) Frame intensity (line widths + background tinting),
+% 2) Heading accent colors (theorem/definition/etc. titles),
+% 3) Inline emphasis colors (\key, \warn, \result),
+% 4) Link colors (internal/external/citation links).
+%
+% Supported modes: none, minimal, balanced (default), rich.
+% - none: keep typography/layout/macros, but use plain amsthm theorem blocks
+%         with no automatic mdframed wrappers or theorem Needspace hooks.
+% - minimal: light visual styling.
+% - balanced: moderate/default styling.
+% - rich: strongest styling while staying structured.
+%
+% Quick user usage in a .tex preamble:
+%   \MathColorMode{none}
+%
+% Note: theorem presentation is finalized at \begin{document}. Put
+% \MathColorMode{none} in the preamble if you want lean/plain theorems.
+%
+% Maintainer note:
+% - If you add a new mode, update BOTH:
+%   1) \Math@ApplyColorModeSettings (behavior),
+%   2) \MathColorMode command (mode parser below).
+% Default color mode is set before \ProcessOptions so package options can
+% override it; \MathColorMode{...} may still change it later in the preamble.
+% Framed-block appearance knobs:
+% - \Math@CalloutBgMix: background blend strength (0 = white, 100 = full color)
+% - \Math@GenericBoxTint: tint level used by generic/custom color boxes
+% - \Math@MainLineWidth: line width for theorem/major framed blocks
+% - \Math@CalloutLineWidth: line width for lightweight callout boxes
+\def\Math@CalloutBgMix{100}
+\def\Math@GenericBoxTint{9}
+\def\Math@MainLineWidth{0.9pt}
+\def\Math@CalloutLineWidth{0.9pt}
+% Heading + inline emphasis colors. These are reassigned per mode.
+\def\Math@TheoremHeadColor{Blue}
+\def\Math@StatementHeadColor{Violet}
+\def\Math@DefinitionHeadColor{Orange}
+\def\Math@AlgoTitleColor{Violet}
+\def\Math@KeyColor{Cobalt}
+\def\Math@WarnColor{Red}
+\def\Math@ResultColor{Gold}
+\def\Math@ResultBgColor{HighlightBg}
+
+
+
+\providecommand{\Math@ApplyColorModeSettings}{%
+  % Base palette for non-none modes.
+  \def\Math@TheoremHeadColor{Blue}%
+  \def\Math@StatementHeadColor{Violet}%
+  \def\Math@DefinitionHeadColor{Orange}%
+  \def\Math@AlgoTitleColor{Violet}%
+  \def\Math@KeyColor{Cobalt}%
+  \def\Math@WarnColor{Red}%
+  \def\Math@ResultColor{Gold}%
+  \def\Math@ResultBgColor{HighlightBg}%
+
+
+
+  \ifdefstring{\Math@colormode}{none}{%
+    % "none" = remove colors but keep spacing/layout stable.
+    \def\Math@CalloutBgMix{0}%
+    \def\Math@GenericBoxTint{0}%
+    \def\Math@MainLineWidth{0pt}%
+    \def\Math@CalloutLineWidth{0pt}%
+    \def\Math@TheoremHeadColor{Ink}%
+    \def\Math@StatementHeadColor{Ink}%
+    \def\Math@DefinitionHeadColor{Ink}%
+    \def\Math@AlgoTitleColor{Ink}%
+    \def\Math@KeyColor{Ink}%
+    \def\Math@WarnColor{Ink}%
+    \def\Math@ResultColor{Ink}%
+    \def\Math@ResultBgColor{white}%
+  }{%
+    \ifdefstring{\Math@colormode}{minimal}{%
+      % Minimal mode: subtle frame + light background tint.
+      \def\Math@CalloutBgMix{88}%
+      \def\Math@GenericBoxTint{7}%
+      \def\Math@MainLineWidth{0.75pt}%
+      \def\Math@CalloutLineWidth{0.75pt}%
+    }{%
+      \ifdefstring{\Math@colormode}{rich}{%
+        % Rich mode: strongest line/tint settings.
+        \def\Math@CalloutBgMix{100}%
+        \def\Math@GenericBoxTint{13}%
+        \def\Math@MainLineWidth{1.1pt}%
+        \def\Math@CalloutLineWidth{1.0pt}%
+      }{%
+        % Balanced mode (default)
+        \def\Math@CalloutBgMix{100}%
+        \def\Math@GenericBoxTint{9}%
+        \def\Math@MainLineWidth{0.9pt}%
+        \def\Math@CalloutLineWidth{0.9pt}%
+      }%
+    }%
+  }%
+}
+
+\providecommand{\Math@ApplyLinkColors}{%
+  % Link colors are kept separate so they can be changed individually.
+  % - linkcolor: internal refs (\ref, \cref, table/figure refs)
+  % - urlcolor : external URLs
+  % - citecolor: bibliography citations
+  % Defaults use dark print-friendly colors so refs/cites/URLs stay distinct.
+  \hypersetup{%
+    linkcolor=blue,
+    urlcolor=Burgundy,
+    citecolor=Forest,
+    filecolor=Burgundy,
+    anchorcolor=blue
+  }%
+}
+
+
+
+
+% Package startup styling.
+% 1) Read the current color mode (none/minimal/balanced/rich) and apply all
+%    style values (box lines, heading colors, fills, emphasis colors).
+% 2) Keep hyperlink text colored instead of boxed.
+% 3) Apply the internal/external/citation link colors defined above.
+% Users can always override link behavior in the document preamble, e.g.
+%   \hypersetup{colorlinks=false}
+\Math@ApplyColorModeSettings
+\hypersetup{colorlinks=true}
+\Math@ApplyLinkColors
+
+% List spacing defaults.
+% Goal: readable lists that do not waste vertical space.
+% - leftmargin=*  : align list body naturally with surrounding text width.
+% - itemsep       : spacing between consecutive items.
+% - topsep        : spacing above and below the list block.
+% You can override these in your .tex file with your own \setlist calls.
+\setlist[itemize]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
+\setlist[enumerate]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
+
+% Running header/footer defaults.
+% - Left header: current section title (\leftmark), preserving mixed case.
+% - Right header: current page number.
+% - Rule: thin separator under the header.
+% - \sectionmark: updates \leftmark whenever a section starts.
+% If you prefer plain pages, set \pagestyle{plain} in your main .tex.
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{13.6pt}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+% Theorem heading styles.
+% These style names are intentionally descriptive (PascalCase) so users can
+% quickly understand what they control and switch styles safely.
+%
+% \newtheoremstyle arguments in order:
+% 1) Space above, 2) Space below, 3) Body font, 4) Indent,
+% 5) Head font, 6) Punctuation after head, 7) Space after head, 8) Head spec.
+%
+% `TheoremHeader`: core result statements.
+%   Used for theorem / lemma / proposition / corollary.
+% `SupportHeader`: supporting statement-like results.
+%   Used for fact / claim / property / conjecture / question / statement / observation.
+% `DefinitionHeader`: definition-style statements.
+% Examples/remarks intentionally use built-in amsthm styles (no custom header).
+\newtheoremstyle{TheoremHeader}
+  {0.6em}{0.6em}{\itshape}{}{\bfseries\color{\Math@TheoremHeadColor}}{.}{0.6em}{}
+\newtheoremstyle{SupportHeader}
+  {0.6em}{0.6em}{\itshape}{}{\bfseries\color{\Math@StatementHeadColor}}{.}{0.6em}{}
+\newtheoremstyle{DefinitionHeader}
+  {0.6em}{0.6em}{}{}{\bfseries\color{\Math@DefinitionHeadColor}}{.}{0.6em}{}
+
+% Theorem-family numbering map with collision-safe declarations.
+%
+% Goal:
+% - If a document already defines an environment (for example `theorem`),
+%   Math.sty will not redefine it.
+% - Missing environments are added automatically.
+%
+% This behavior enables seamless drop-in usage on legacy files while still
+% giving sensible defaults on fresh files.
+\providecommand{\Math@MaybeNewTheoremBySection}[3]{%
+  \ifcsdef{#1}{}{%
+    \theoremstyle{#2}%
+    \newtheorem{#1}{#3}[section]%
+  }%
+}
+\providecommand{\Math@MaybeNewTheoremShared}[4]{%
+  \ifcsdef{#1}{}{%
+    \theoremstyle{#2}%
+    \newaliascnt{#1}{#3}%
+    \newtheorem{#1}[#1]{#4}%
+    \aliascntresetthe{#1}%
+  }%
+}
+
+% Core theorem family.
+% - `theorem` resets by section.
+% - lemma/proposition/corollary share theorem numbering.
+\Math@MaybeNewTheoremBySection{theorem}{TheoremHeader}{Theorem}
+\Math@MaybeNewTheoremShared{lemma}{TheoremHeader}{theorem}{Lemma}
+\Math@MaybeNewTheoremShared{proposition}{TheoremHeader}{theorem}{Proposition}
+\Math@MaybeNewTheoremShared{corollary}{TheoremHeader}{theorem}{Corollary}
+
+% Support statement family.
+% - `fact` resets by section.
+% - related statement environments share `fact` numbering.
+\Math@MaybeNewTheoremBySection{fact}{SupportHeader}{Fact}
+\Math@MaybeNewTheoremShared{claim}{SupportHeader}{fact}{Claim}
+\Math@MaybeNewTheoremShared{property}{SupportHeader}{fact}{Property}
+\Math@MaybeNewTheoremShared{conjecture}{SupportHeader}{fact}{Conjecture}
+\Math@MaybeNewTheoremShared{question}{SupportHeader}{fact}{Question}
+\Math@MaybeNewTheoremShared{statement}{SupportHeader}{fact}{Statement}
+\Math@MaybeNewTheoremShared{obs}{SupportHeader}{fact}{Observation}
+
+% Definitions/examples/remarks keep independent section-based counters.
+\Math@MaybeNewTheoremBySection{definition}{DefinitionHeader}{Definition}
+\Math@MaybeNewTheoremBySection{example}{definition}{Example}
+\Math@MaybeNewTheoremBySection{remark}{remark}{Remark}
+
+% Precise cleveref names, including alias-counter theorem environments.
+% This keeps shared numbering while preserving labels such as Lemma, Claim, etc.
+\crefname{theorem}{theorem}{theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{lemma}{lemma}{lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{proposition}{proposition}{propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\crefname{corollary}{corollary}{corollaries}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{fact}{fact}{facts}
+\Crefname{fact}{Fact}{Facts}
+\crefname{claim}{claim}{claims}
+\Crefname{claim}{Claim}{Claims}
+\crefname{property}{property}{properties}
+\Crefname{property}{Property}{Properties}
+\crefname{conjecture}{conjecture}{conjectures}
+\Crefname{conjecture}{Conjecture}{Conjectures}
+\crefname{question}{question}{questions}
+\Crefname{question}{Question}{Questions}
+\crefname{statement}{statement}{statements}
+\Crefname{statement}{Statement}{Statements}
+\crefname{obs}{observation}{observations}
+\Crefname{obs}{Observation}{Observations}
+\crefname{definition}{definition}{definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{example}{example}{examples}
+\Crefname{example}{Example}{Examples}
+\crefname{remark}{remark}{remarks}
+\Crefname{remark}{Remark}{Remarks}
+
+
+
+
+% ------------------------------
+% Framed Box Engine
+% ------------------------------
+% This section defines all `mdframed` styles used by theorem wrappers and user-facing callouts.
+%
+% Naming convention:
+% - `theorembox`, `definitionbox`, ... : larger blocks used around theorem-like
+%   environments.
+% - `...boxstyle`                       : reusable callout styles for custom
+%   box environments (info/success/warning/etc).
+%
+% Internal helper:
+%   \Math@DefineUnframedStyle{style}{skipAbove}{skipBelow}{innerVertical}{innerHorizontal}
+% Used by color mode `none` so layout spacing remains stable while visible
+% border/fill is removed.
+\providecommand{\Math@DefineUnframedStyle}[5]{%
+  \mdfdefinestyle{#1}{%
+    linecolor=white,
+    linewidth=0pt,
+    backgroundcolor=white,
+    roundcorner=0pt,
+    innertopmargin=#4,
+    innerbottommargin=#4,
+    innerleftmargin=#5,
+    innerrightmargin=#5,
+    skipabove=#2,
+    skipbelow=#3,
+    nobreak=true
+  }%
+}
+
+% Neutral manual box that remains visible even in \MathColorMode{none}.
+% Use when lean mode is active but one local statement still deserves a frame.
+\providecommand{\Math@DefinePlainBoxStyle}{%
+  \mdfdefinestyle{plainboxstyle}{%
+    linecolor=Ink,
+    linewidth=0.6pt,
+    backgroundcolor=white,
+    roundcorner=4pt,
+    innertopmargin=0.45em,
+    innerbottommargin=0.45em,
+    innerleftmargin=0.65em,
+    innerrightmargin=0.65em,
+    skipabove=0.35em,
+    skipbelow=0.35em,
+    nobreak=true
+  }%
+}
+
+% Rebuild every frame style according to the active color mode.
+% This runs at package load and whenever \MathColorMode{...} is called.
+\providecommand{\Math@DefineFramedStyles}{%
+  \ifdefstring{\Math@colormode}{none}{%
+    % "none" mode: preserve spacing footprint but remove visible chrome.
+    \Math@DefineUnframedStyle{theorembox}{0.8em}{0.8em}{0.7em}{0.9em}%
+    \Math@DefineUnframedStyle{definitionbox}{0.8em}{0.8em}{0.7em}{0.9em}%
+    \Math@DefineUnframedStyle{supportboxstyle}{0.8em}{0.8em}{0.7em}{0.9em}%
+    \Math@DefineUnframedStyle{propertyboxstyle}{0.8em}{0.8em}{0.7em}{0.9em}%
+    \Math@DefineUnframedStyle{infoboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{successboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{warningboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{dangerboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{ideaboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{exampleboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{hintboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{blueboxstyle}{0.35em}{0.35em}{0.45em}{0.65em}%
+    \Math@DefineUnframedStyle{algoboxstyle}{0.7em}{0.7em}{0.6em}{0.8em}%
+    \Math@DefinePlainBoxStyle%
+  }{%
+    % Core theorem-family wrappers.
+    \mdfdefinestyle{theorembox}{%
+      linecolor=Blue,
+      linewidth=\Math@MainLineWidth,
+      backgroundcolor=InfoBg!\Math@CalloutBgMix,
+      roundcorner=6pt,
+      innertopmargin=0.7em,
+      innerbottommargin=0.7em,
+      innerleftmargin=0.9em,
+      innerrightmargin=0.9em,
+      skipabove=0.8em,
+      skipbelow=0.8em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{definitionbox}{%
+      linecolor=Orange,
+      linewidth=\Math@MainLineWidth,
+      backgroundcolor=WarningBg!\Math@CalloutBgMix,
+      roundcorner=6pt,
+      innertopmargin=0.7em,
+      innerbottommargin=0.7em,
+      innerleftmargin=0.9em,
+      innerrightmargin=0.9em,
+      skipabove=0.8em,
+      skipbelow=0.8em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{supportboxstyle}{%
+      linecolor=Violet,
+      linewidth=\Math@MainLineWidth,
+      backgroundcolor=HighlightBg!\Math@CalloutBgMix,
+      roundcorner=6pt,
+      innertopmargin=0.7em,
+      innerbottommargin=0.7em,
+      innerleftmargin=0.9em,
+      innerrightmargin=0.9em,
+      skipabove=0.8em,
+      skipbelow=0.8em,
+      nobreak=true
+    }%
+    % Property block intentionally a bit lighter than main theorem boxes.
+    \mdfdefinestyle{propertyboxstyle}{%
+      linecolor=Navy,
+      linewidth=0.75pt,
+      backgroundcolor=HighlightBg!\Math@CalloutBgMix,
+      roundcorner=6pt,
+      innertopmargin=0.7em,
+      innerbottommargin=0.7em,
+      innerleftmargin=0.9em,
+      innerrightmargin=0.9em,
+      skipabove=0.8em,
+      skipbelow=0.8em,
+      nobreak=true
+    }%
+    % Lightweight semantic callouts for notes and annotations.
+    \mdfdefinestyle{infoboxstyle}{%
+      linecolor=Cobalt,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=InfoBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{successboxstyle}{%
+      linecolor=Green,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=SuccessBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{warningboxstyle}{%
+      linecolor=Amber,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=WarningBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{dangerboxstyle}{%
+      linecolor=Red,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=DangerBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{ideaboxstyle}{%
+      linecolor=Violet,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=HighlightBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{exampleboxstyle}{%
+      linecolor=Brown,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=Paper,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    \mdfdefinestyle{hintboxstyle}{%
+      linecolor=Cyan,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=InfoBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    % Legacy compatibility style retained for older documents.
+    \mdfdefinestyle{blueboxstyle}{%
+      linecolor=Blue,
+      linewidth=\Math@CalloutLineWidth,
+      backgroundcolor=InfoBg!\Math@CalloutBgMix,
+      roundcorner=4pt,
+      innertopmargin=0.45em,
+      innerbottommargin=0.45em,
+      innerleftmargin=0.65em,
+      innerrightmargin=0.65em,
+      skipabove=0.35em,
+      skipbelow=0.35em,
+      nobreak=true
+    }%
+    % Dedicated wrapper for pseudocode/algo environments.
+    \mdfdefinestyle{algoboxstyle}{%
+      linecolor=Violet,
+      linewidth=\Math@MainLineWidth,
+      backgroundcolor=HighlightBg!\Math@CalloutBgMix,
+      roundcorner=6pt,
+      innertopmargin=0.6em,
+      innerbottommargin=0.6em,
+      innerleftmargin=0.8em,
+      innerrightmargin=0.8em,
+      skipabove=0.7em,
+      skipbelow=0.7em,
+      nobreak=true
+    }%
+    \Math@DefinePlainBoxStyle%
+  }%
+}
+
+% Apply frame definitions once at load time.
+\Math@DefineFramedStyles
+
+% Public color API
+\NewDocumentCommand{\MathColorMode}{m}{%
+  \edef\Math@requestedmode{#1}%
+  \ifdefstring{\Math@requestedmode}{none}{%
+    \def\Math@colormode{none}%
+  }{%
+    \ifdefstring{\Math@requestedmode}{minimal}{%
+      \def\Math@colormode{minimal}%
+    }{%
+      \ifdefstring{\Math@requestedmode}{balanced}{%
+        \def\Math@colormode{balanced}%
+      }{%
+        \ifdefstring{\Math@requestedmode}{rich}{%
+          \def\Math@colormode{rich}%
+        }{%
+          \PackageWarning{Math}{Unknown color mode '#1'. Falling back to balanced}%
+          \def\Math@colormode{balanced}%
+        }%
+      }%
+    }%
+  }%
+  % Recompute color variables, hyperlink colors, and frame styles together.
+  \Math@ApplyColorModeSettings
+  \Math@ApplyLinkColors
+  \Math@DefineFramedStyles
+}
+
+% Helper for optional box titles:
+% prints a bold heading only when a non-empty title is supplied.
+\providecommand{\Math@BoxTitle}[1]{%
+  \ifstrempty{#1}{}{{\textbf{\textcolor{Ink}{#1}}\par\smallskip}}%
+}
+
+% Semantic callout environments (all share the same interface):
+%   \begin{<name>}[Optional Title] ... \end{<name>}
+% Examples: infobox, successbox, warningbox, dangerbox, ideabox, ...
+\NewDocumentEnvironment{infobox}{O{} +b}{%
+  \begin{mdframed}[style=infoboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{successbox}{O{} +b}{%
+  \begin{mdframed}[style=successboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{warningbox}{O{} +b}{%
+  \begin{mdframed}[style=warningboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{dangerbox}{O{} +b}{%
+  \begin{mdframed}[style=dangerboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{ideabox}{O{} +b}{%
+  \begin{mdframed}[style=ideaboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{examplebox}{O{} +b}{%
+  \begin{mdframed}[style=exampleboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{hintbox}{O{} +b}{%
+  \begin{mdframed}[style=hintboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+% Compatibility wrappers for older color-named box API.
+\NewDocumentEnvironment{bluebox}{O{} +b}{%
+  \begin{mdframed}[style=blueboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{greenbox}{O{} +b}{%
+  \begin{mdframed}[style=successboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{redbox}{O{} +b}{%
+  \begin{mdframed}[style=dangerboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+% Generic color callout:
+%   \begin{ColorNoteBox}{<ColorName>}[Optional Title] ... \end{ColorNoteBox}
+% This is useful when a semantic box is not specific enough.
+% `<ColorName>` must be an xcolor-known color.
+\NewDocumentEnvironment{ColorNoteBox}{m O{} +b}{%
+  \begin{mdframed}[
+    linecolor=#1,
+    linewidth=\Math@CalloutLineWidth,
+    backgroundcolor=#1!\Math@GenericBoxTint,
+    roundcorner=4pt,
+    innertopmargin=0.45em,
+    innerbottommargin=0.45em,
+    innerleftmargin=0.65em,
+    innerrightmargin=0.65em,
+    skipabove=0.35em,
+    skipbelow=0.35em,
+    nobreak=true
+  ]\Math@BoxTitle{#2}#3\end{mdframed}%
+}{}
+
+% Simple all-purpose colored box:
+% Usage:
+%   \begin{generalbox}[Blue][Optional Title] ... \end{generalbox}
+% First optional argument = border/fill base color.
+% Second optional argument = title line (leave empty for no title).
+\NewDocumentEnvironment{generalbox}{O{Blue} O{} +b}{%
+  \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
+}{}
+
+% Neutral manual box:
+%   \begin{plainbox}[Optional Title] ... \end{plainbox}
+% Unlike the color-named boxes, this stays visibly framed in \MathColorMode{none}.
+\NewDocumentEnvironment{plainbox}{O{} +b}{%
+  \begin{mdframed}[style=plainboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
+}{}
+
+% Readable alias (PascalCase). We avoid lowercase `box`/`colorbox` because
+% those names collide with core TeX/xcolor commands.
+\ifcsdef{ColorBox}{%
+  \RenewDocumentEnvironment{ColorBox}{O{Blue} O{} +b}{%
+    \begin{generalbox}[#1][#2]#3\end{generalbox}%
+  }{}%
+}{%
+  \NewDocumentEnvironment{ColorBox}{O{Blue} O{} +b}{%
+    \begin{generalbox}[#1][#2]#3\end{generalbox}%
+  }{}%
+}
+
+% Exact all-caps alias for users who prefer uppercase environment names.
+\ifcsdef{COLORBOX}{%
+  \RenewDocumentEnvironment{COLORBOX}{O{Blue} O{} +b}{%
+    \begin{ColorBox}[#1][#2]#3\end{ColorBox}%
+  }{}%
+}{%
+  \NewDocumentEnvironment{COLORBOX}{O{Blue} O{} +b}{%
+    \begin{ColorBox}[#1][#2]#3\end{ColorBox}%
+  }{}%
+}
+
+% Short alias for fast note-taking.
+\NewDocumentEnvironment{gbox}{O{Blue} O{} +b}{%
+  \begin{generalbox}[#1][#2]#3\end{generalbox}%
+}{}
+
+% Define a reusable named style:
+%   \DefineNoteBoxStyle{MyStyle}{Teal}
+% Then use it directly with mdframed if you want a custom house style.
+\NewDocumentCommand{\DefineNoteBoxStyle}{mm}{%
+  \mdfdefinestyle{#1}{%
+    linecolor=#2,
+    linewidth=\Math@CalloutLineWidth,
+    backgroundcolor=#2!\Math@GenericBoxTint,
+    roundcorner=4pt,
+    innertopmargin=0.45em,
+    innerbottommargin=0.45em,
+    innerleftmargin=0.65em,
+    innerrightmargin=0.65em,
+    skipabove=0.35em,
+    skipbelow=0.35em,
+    nobreak=true
+  }%
+}
+
+% Lightweight algorithm wrapper (no algorithm/algpseudocode dependency).
+% - `pseudocode` prints a titled framed block in monospaced text.
+% - `algo` is a short alias with identical behavior.
+% - No forced numbering, no forced keywords: write natural-language pseudocode.
+\NewDocumentEnvironment{pseudocode}{O{Algorithm} +b}{%
+  \begin{mdframed}[style=algoboxstyle]%
+  {\textbf{\textcolor{\Math@AlgoTitleColor}{#1}}}\par\smallskip
+  {\ttfamily\small #2}%
+  \end{mdframed}%
+}{}
+
+\NewDocumentEnvironment{algo}{O{Algorithm} +b}{%
+  \begin{pseudocode}[#1]#2\end{pseudocode}%
+}{}
+
+% Inline emphasis helpers for quick semantic highlighting in running text.
+% \key{...}    -> key term
+% \warn{...}   -> warning/attention
+% \result{...} -> compact highlighted result
+\NewDocumentCommand{\key}{m}{{\textcolor{\Math@KeyColor}{\textbf{#1}}}}
+\NewDocumentCommand{\warn}{m}{{\textcolor{\Math@WarnColor}{\textbf{#1}}}}
+\NewDocumentCommand{\result}{m}{%
+  {\begingroup\setlength{\fboxsep}{1.4pt}\colorbox{\Math@ResultBgColor}{\textcolor{\Math@ResultColor}{\textbf{#1}}}\endgroup}%
+}
+
+% Theorem presentation:
+% - minimal/balanced/rich modes automatically wrap theorem-like environments in
+%   mdframed styles and add Needspace guards before each block.
+% - none mode keeps theorem-like environments as plain amsthm blocks. This is
+%   the lean setting for documents that want macros/typography without automatic
+%   visual theorem boxes. Manual boxes remain available via `plainbox`,
+%   `generalbox`, `gbox`, etc.
+%
+% The decision is made at \begin{document}, so call \MathColorMode{none} in the
+% preamble if you want plain theorem blocks.
+\providecommand{\Math@SetupBoxedTheorems}{%
+  % Automatically wrap selected theorem-like environments in mdframed styles.
+  % This keeps source files clean: users just write \begin{theorem} ... \end{theorem}.
+  \surroundwithmdframed[style=theorembox]{theorem}%
+  \surroundwithmdframed[style=theorembox]{lemma}%
+  \surroundwithmdframed[style=theorembox]{proposition}%
+  \surroundwithmdframed[style=theorembox]{corollary}%
+  \surroundwithmdframed[style=definitionbox]{definition}%
+  \surroundwithmdframed[style=supportboxstyle]{fact}%
+  \surroundwithmdframed[style=supportboxstyle]{claim}%
+  \surroundwithmdframed[style=propertyboxstyle]{property}%
+  \surroundwithmdframed[style=supportboxstyle]{conjecture}%
+  \surroundwithmdframed[style=supportboxstyle]{question}%
+  \surroundwithmdframed[style=supportboxstyle]{statement}%
+  \surroundwithmdframed[style=supportboxstyle]{obs}%
+  % Prevent awkward page breaks where a theorem title lands at page bottom.
+  % `Needspace` asks for a minimum vertical budget before starting each block.
+  \AtBeginEnvironment{theorem}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{lemma}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{proposition}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{corollary}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{definition}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{fact}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{claim}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{property}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{conjecture}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{question}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{statement}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{obs}{\Needspace{7\baselineskip}}%
+  \AtBeginEnvironment{example}{\Needspace{6\baselineskip}}%
+  \AtBeginEnvironment{remark}{\Needspace{6\baselineskip}}%
+}
+
+\AtBeginDocument{%
+  \ifdefstring{\Math@colormode}{none}{%
+    \PackageInfo{Math}{Color mode none: using plain theorem blocks without automatic mdframed wrappers or theorem Needspace hooks}%
+  }{%
+    \PackageInfo{Math}{Color mode \Math@colormode: using automatic mdframed theorem wrappers and theorem Needspace hooks}%
+    \Math@SetupBoxedTheorems%
+  }%
+}
+
+
+
+
+
+% ============================================================
+% BASIC NUMBER SYSTEMS / STANDARD SETS
+% ============================================================
+
+\providecommand{\N}{\mathbb{N}}            % natural numbers
+\providecommand{\Z}{\mathbb{Z}}            % integers
+\providecommand{\Q}{\mathbb{Q}}            % rational numbers
+\providecommand{\R}{\mathbb{R}}            % real numbers
+\providecommand{\C}{\mathbb{C}}            % complex numbers
+\providecommand{\F}{\mathbb{F}}            % base field (common default in algebra/combinatorics)
+\providecommand{\K}{\mathbb{K}}            % generic scalar field when base field is unspecified
+\providecommand{\A}{\mathbb{A}}            % affine space (default geometric meaning)
+\providecommand{\T}{\mathbb{T}}            % unit circle / torus (default in analysis)
+\providecommand{\E}{\mathbb{E}}            % expectation operator in probability
+\providecommand{\I}{\mathbb{I}}            % indicator symbol (alternative to \one)
+\let\Math@orig@pilcrow\P                   % preserve original paragraph-sign command
+\providecommand{\pilcrow}{}
+\renewcommand{\pilcrow}{\ifmmode\text{\Math@orig@pilcrow}\else\Math@orig@pilcrow\fi}
+\renewcommand{\P}{\ensuremath{\mathbb{P}}} % probability measure / blackboard-bold P
+\providecommand{\PP}{\ensuremath{\mathbb{P}}} % projective space or alternate blackboard-bold P
+\providecommand{\HH}{\mathbb{H}}           % quaternions by default
+\providecommand{\OO}{\mathbb{O}}           % octonions
+\providecommand{\one}{\mathbbm{1}}         % indicator function / constant-one function
+\providecommand{\zero}{\mathbf{0}}         % zero vector / zero element
+\providecommand{\id}{\mathrm{id}}          % identity map
+% Common variants of standard number sets (frequent in analysis/probability/optimization)
+\providecommand{\Rn}{\R^n}                 % n-dimensional real space
+\providecommand{\Rm}{\R^m}                 % m-dimensional real space
+\providecommand{\Rk}{\R^k}                 % k-dimensional real space
+\providecommand{\Rd}{\R^d}                 % d-dimensional real space
+\providecommand{\Rtwo}{\R^2}               % plane
+\providecommand{\Rthree}{\R^3}             % 3-space
+\providecommand{\Cn}{\C^n}                 % n-dimensional complex space
+\providecommand{\Cstar}{\C^{\times}}       % nonzero complex numbers
+\providecommand{\Fn}{\F^n}                 % n-dimensional vector space over F
+
+\providecommand{\Rp}{\R_{+}}               % strictly positive reals  
+\providecommand{\Rneg}{\R_{<0}}            % strictly negative reals
+\providecommand{\Rnneg}{\R_{\ge 0}}      % nonnegative reals
+\providecommand{\Rnpos}{\R_{\le 0}}      % nonpositive reals
+\providecommand{\Rstar}{\R^{\times}}       % nonzero reals
+\providecommand{\Rnz}{\R\setminus\{0\}}    % nonzero reals (explicit set form)
+\providecommand{\Rge}[1]{\R_{\ge #1}}      % reals >= a
+\providecommand{\Rgt}[1]{\R_{> #1}}        % reals > a
+\providecommand{\Rle}[1]{\R_{\le #1}}      % reals <= a
+\providecommand{\Rlt}[1]{\R_{< #1}}        % reals < a
+
+\providecommand{\Znneg}{\Z_{\ge 0}}      % nonnegative integers
+\providecommand{\Znpos}{\Z_{\le 0}}      % nonpositive integers
+\providecommand{\Zp}{\Z_{>0}}            % positive integers
+\providecommand{\Zneg}{\Z_{<0}}            % negative integers
+\providecommand{\Nzero}{\N_{0}}            % naturals including 0
+\providecommand{\Np}{\N_{>0}}            % strictly positive naturals
+\providecommand{\Qnonneg}{\Q_{\ge 0}}      % nonnegative rationals
+\providecommand{\Qp}{\Q_{>0}}            % positive rationals
+
+% ============================================================
+% CALLIGRAPHIC / SCRIPT
+% ============================================================
+
+\providecommand{\cA}{\mathcal{A}}          % calligraphic A
+\providecommand{\cB}{\mathcal{B}}          % calligraphic B
+\providecommand{\cC}{\mathcal{C}}          % calligraphic C
+\providecommand{\cD}{\mathcal{D}}          % calligraphic D
+\providecommand{\cE}{\mathcal{E}}          % calligraphic E
+\providecommand{\cF}{\mathcal{F}}          % calligraphic F
+\providecommand{\cG}{\mathcal{G}}          % calligraphic G
+\providecommand{\cH}{\mathcal{H}}          % calligraphic H
+\providecommand{\cI}{\mathcal{I}}          % calligraphic I
+\providecommand{\cJ}{\mathcal{J}}          % calligraphic J
+\providecommand{\cK}{\mathcal{K}}          % calligraphic K
+\providecommand{\cL}{\mathcal{L}}          % calligraphic L
+\providecommand{\cM}{\mathcal{M}}          % calligraphic M
+\providecommand{\cN}{\mathcal{N}}          % calligraphic N
+\providecommand{\cO}{\mathcal{O}}          % big-O style / sheaf O
+\providecommand{\cP}{\mathcal{P}}          % power set / polynomial hierarchy / path space
+\providecommand{\cQ}{\mathcal{Q}}          % calligraphic Q
+\providecommand{\cR}{\mathcal{R}}          % calligraphic R
+\providecommand{\cS}{\mathcal{S}}          % calligraphic S
+\providecommand{\cT}{\mathcal{T}}          % calligraphic T
+\providecommand{\cU}{\mathcal{U}}          % calligraphic U
+\providecommand{\cV}{\mathcal{V}}          % calligraphic V
+\providecommand{\cW}{\mathcal{W}}          % calligraphic W
+\providecommand{\cX}{\mathcal{X}}          % calligraphic X
+\providecommand{\cY}{\mathcal{Y}}          % calligraphic Y
+\providecommand{\cZ}{\mathcal{Z}}          % calligraphic Z
+
+\providecommand{\sA}{\mathscr{A}}          % script A
+\providecommand{\sB}{\mathscr{B}}          % script B
+\providecommand{\sC}{\mathscr{C}}          % script C
+\providecommand{\sD}{\mathscr{D}}          % script D
+\providecommand{\sE}{\mathscr{E}}          % script E
+\providecommand{\sF}{\mathscr{F}}          % script F
+\providecommand{\sG}{\mathscr{G}}          % script G
+\providecommand{\sH}{\mathscr{H}}          % script H
+\providecommand{\sI}{\mathscr{I}}          % script I
+\providecommand{\sJ}{\mathscr{J}}          % script J
+\providecommand{\sK}{\mathscr{K}}          % script K
+\providecommand{\sL}{\mathscr{L}}          % script L
+\providecommand{\sM}{\mathscr{M}}          % script M
+\providecommand{\sN}{\mathscr{N}}          % script N
+\providecommand{\sO}{\mathscr{O}}          % script O
+\providecommand{\sP}{\mathscr{P}}          % script P
+\providecommand{\sQ}{\mathscr{Q}}          % script Q
+\providecommand{\sR}{\mathscr{R}}          % script R
+\providecommand{\sS}{\mathscr{S}}          % script S
+\providecommand{\sT}{\mathscr{T}}          % script T
+\providecommand{\sU}{\mathscr{U}}          % script U
+\providecommand{\sV}{\mathscr{V}}          % script V
+\providecommand{\sW}{\mathscr{W}}          % script W
+\providecommand{\sX}{\mathscr{X}}          % script X
+\providecommand{\sY}{\mathscr{Y}}          % script Y
+\providecommand{\sZ}{\mathscr{Z}}          % script Z
+
+% ============================================================
+% BOLD SYMBOLS / VECTORS / MATRICES
+% ============================================================
+
+\providecommand{\va}{\mathbf{a}}           % bold a vector
+\providecommand{\vb}{\mathbf{b}}           % bold b vector
+\providecommand{\vc}{\mathbf{c}}           % bold c vector
+\providecommand{\vd}{\mathbf{d}}           % bold d vector
+\providecommand{\ve}{\mathbf{e}}           % bold e vector
+\providecommand{\vf}{\mathbf{f}}           % bold f vector
+\providecommand{\vg}{\mathbf{g}}           % bold g vector
+\providecommand{\vh}{\mathbf{h}}           % bold h vector
+\providecommand{\vi}{\mathbf{i}}           % bold i vector
+\providecommand{\vj}{\mathbf{j}}           % bold j vector
+\providecommand{\vk}{\mathbf{k}}           % bold k vector
+\providecommand{\vl}{\mathbf{l}}           % bold l vector
+\providecommand{\vm}{\mathbf{m}}           % bold m vector
+\providecommand{\vn}{\mathbf{n}}           % bold n vector
+\providecommand{\vo}{\mathbf{o}}           % bold o vector
+\providecommand{\vp}{\mathbf{p}}           % bold p vector
+\providecommand{\vq}{\mathbf{q}}           % bold q vector
+\providecommand{\vr}{\mathbf{r}}           % bold r vector
+\providecommand{\vs}{\mathbf{s}}           % bold s vector
+\providecommand{\vt}{\mathbf{t}}           % bold t vector
+\providecommand{\vu}{\mathbf{u}}           % bold u vector
+\providecommand{\vv}{\mathbf{v}}           % bold v vector
+\providecommand{\vw}{\mathbf{w}}           % bold w vector
+\providecommand{\vx}{\mathbf{x}}           % bold x vector
+\providecommand{\vy}{\mathbf{y}}           % bold y vector
+\providecommand{\vz}{\mathbf{z}}           % bold z vector
+
+\providecommand{\vA}{\mathbf{A}}           % bold A matrix
+\providecommand{\vB}{\mathbf{B}}           % bold B matrix
+\providecommand{\vC}{\mathbf{C}}           % bold C matrix
+\providecommand{\vD}{\mathbf{D}}           % bold D matrix
+\providecommand{\vE}{\mathbf{E}}           % bold E matrix
+\providecommand{\vF}{\mathbf{F}}           % bold F matrix
+\providecommand{\vG}{\mathbf{G}}           % bold G matrix
+\providecommand{\vH}{\mathbf{H}}           % bold H matrix
+\providecommand{\vI}{\mathbf{I}}           % bold I matrix / identity
+\providecommand{\vJ}{\mathbf{J}}           % bold J matrix
+\providecommand{\vK}{\mathbf{K}}           % bold K matrix
+\providecommand{\vL}{\mathbf{L}}           % bold L matrix
+\providecommand{\vM}{\mathbf{M}}           % bold M matrix
+\providecommand{\vN}{\mathbf{N}}           % bold N matrix
+\providecommand{\vO}{\mathbf{O}}           % bold O matrix
+\providecommand{\vP}{\mathbf{P}}           % bold P matrix
+\providecommand{\vQ}{\mathbf{Q}}           % bold Q matrix
+\providecommand{\vR}{\mathbf{R}}           % bold R matrix
+\providecommand{\vS}{\mathbf{S}}           % bold S matrix
+\providecommand{\vT}{\mathbf{T}}           % bold T matrix
+\providecommand{\vU}{\mathbf{U}}           % bold U matrix
+\providecommand{\vV}{\mathbf{V}}           % bold V matrix
+\providecommand{\vW}{\mathbf{W}}           % bold W matrix
+\providecommand{\vX}{\mathbf{X}}           % bold X matrix
+\providecommand{\vY}{\mathbf{Y}}           % bold Y matrix
+\providecommand{\vZ}{\mathbf{Z}}           % bold Z matrix
+
+\providecommand{\balpha}{\bm{\alpha}}      % bold alpha
+\providecommand{\bbeta}{\bm{\beta}}        % bold beta
+\providecommand{\bgamma}{\bm{\gamma}}      % bold gamma
+\providecommand{\bdelta}{\bm{\delta}}      % bold delta
+\providecommand{\bepsilon}{\bm{\epsilon}}  % bold epsilon
+\providecommand{\bzeta}{\bm{\zeta}}        % bold zeta
+\providecommand{\boldeta}{\bm{\eta}}       % bold eta
+\providecommand{\btheta}{\bm{\theta}}      % bold theta
+\providecommand{\biota}{\bm{\iota}}        % bold iota
+\providecommand{\bkappa}{\bm{\kappa}}      % bold kappa
+\providecommand{\blambda}{\bm{\lambda}}    % bold lambda
+\providecommand{\bmu}{\bm{\mu}}            % bold mu
+\providecommand{\bnu}{\bm{\nu}}            % bold nu
+\providecommand{\bxi}{\bm{\xi}}            % bold xi
+\providecommand{\bpi}{\bm{\pi}}            % bold pi
+\providecommand{\brho}{\bm{\rho}}          % bold rho
+\providecommand{\bsigma}{\bm{\sigma}}      % bold sigma
+\providecommand{\btau}{\bm{\tau}}          % bold tau
+\providecommand{\bupsilon}{\bm{\upsilon}}  % bold upsilon
+\providecommand{\bphi}{\bm{\phi}}          % bold phi
+\providecommand{\bvarphi}{\bm{\varphi}}    % bold varphi
+\providecommand{\bchi}{\bm{\chi}}          % bold chi
+\providecommand{\bpsi}{\bm{\psi}}          % bold psi
+\providecommand{\bomega}{\bm{\omega}}      % bold omega
+
+% ============================================================
+% DELIMITERS / PAIRED STRUCTURES
+% ============================================================
+
+\DeclarePairedDelimiter{\paren}{(}{)}          % parenthesized expression
+\DeclarePairedDelimiter{\bracket}{[}{]}        % bracketed expression
+\DeclarePairedDelimiter{\bracep}{\{}{\}}       % braced expression
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}  % absolute value
+\DeclarePairedDelimiter{\norm}{\lVert}{\rVert} % norm
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil} % ceiling
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor} % floor
+\DeclarePairedDelimiter{\ang}{\langle}{\rangle}   % angle brackets / inner product
+\DeclarePairedDelimiter{\iprod}{\langle}{\rangle} % inner product wrapper
+\DeclarePairedDelimiter{\set}{\{}{\}}             % set delimiters
+\DeclarePairedDelimiter{\braces}{\lbrace}{\rbrace} % explicit braces
+\DeclarePairedDelimiter{\sqbracks}{[}{]}          % square brackets
+\DeclarePairedDelimiter{\tuple}{(}{)}             % tuple notation
+
+\providecommand{\of}[1]{\!\left( #1 \right)}         % function application with parentheses
+\providecommand{\brak}[1]{\!\left[ #1 \right]}       % bracketed function-style notation
+\providecommand{\brc}[1]{\!\left\{ #1 \right\}}      % braced function-style notation
+\providecommand{\angles}[1]{\left\langle #1 \right\rangle} % angle brackets
+\providecommand{\eval}[1]{\left. #1 \right|}         % evaluation bar
+\providecommand{\setbuild}[2]{\left\{ #1 \,\middle|\, #2 \right\}} % set-builder notation
+\providecommand{\suchthat}{\;\middle|\;}             % such-that separator in scalable delimiters
+\providecommand{\st}{\;:\;}                          % short such-that separator
+\providecommand{\restr}[2]{#1\!\upharpoonright_{#2}} % restriction of a function
+\providecommand{\closure}[1]{\overline{#1}}          % topological closure
+\providecommand{\interior}[1]{#1^\circ}              % interior
+\providecommand{\boundary}[1]{\partial #1}           % boundary
+\providecommand{\compl}[1]{#1^{\mathsf{c}}}          % complement
+\providecommand{\inv}{^{-1}}                         % inverse exponent
+
+% ============================================================
+% ARROWS / MAPS / MORPHISMS
+% ============================================================
+
+\providecommand{\toiso}{\xrightarrow{\sim}}          % isomorphism arrow
+\providecommand{\fromiso}{\xleftarrow{\sim}}         % reverse isomorphism arrow
+\providecommand{\into}{\hookrightarrow}              % injection arrow
+\providecommand{\onto}{\twoheadrightarrow}           % surjection arrow
+\providecommand{\intoonto}{\hookrightarrow\twoheadrightarrow} % schematic mono+epi
+\providecommand{\longto}{\longrightarrow}            % long right arrow
+\providecommand{\longfrom}{\longleftarrow}           % long left arrow
+\providecommand{\xto}[1]{\xrightarrow{#1}}           % labeled arrow
+\providecommand{\xfrom}[1]{\xleftarrow{#1}}          % labeled reverse arrow
+\providecommand{\mapsfrom}{\mathrel{\reflectbox{$\mapsto$}}} % reverse mapsto
+\providecommand{\isom}{\cong}                        % isomorphic
+\providecommand{\homeo}{\approx}                     % homeomorphic, if you use approx for that
+\providecommand{\embed}{\hookrightarrow}             % embedding arrow
+\providecommand{\surj}{\twoheadrightarrow}           % surjective arrow
+\providecommand{\inj}{\hookrightarrow}               % injective arrow
+\providecommand{\bij}{\xrightarrow{\sim}}            % bijection arrow
+\providecommand{\tensor}{\otimes}                    % tensor product
+\providecommand{\directsum}{\oplus}                  % direct sum
+\providecommand{\directprod}{\prod}                  % direct product
+\providecommand{\freeprod}{\ast}                     % free product
+\providecommand{\semidirect}{\rtimes}                % semidirect product
+\providecommand{\Semidirect}{\ltimes}                % opposite semidirect product
+
+% ============================================================
+% RELATIONAL / LOGIC SYMBOLS
+% ============================================================
+
+% Variant Greek aliases. These do not override the base Greek commands.
+\providecommand{\eps}{\varepsilon}                   % common short epsilon alias
+\providecommand{\veps}{\varepsilon}                  % variant epsilon
+\providecommand{\vtheta}{\vartheta}                  % variant theta
+\providecommand{\vkappa}{\varkappa}                  % variant kappa
+\providecommand{\vpi}{\varpi}                        % variant pi
+\providecommand{\vrho}{\varrho}                      % variant rho
+\providecommand{\vsigma}{\varsigma}                  % variant sigma
+\providecommand{\vphi}{\varphi}                      % variant phi
+\providecommand{\leqv}{\leqslant}                    % variant <=
+\providecommand{\geqv}{\geqslant}                    % variant >=
+\providecommand{\neqv}{\neq}                         % inequality alias
+\providecommand{\eqdef}{\stackrel{\mathrm{def}}{=}} % equality by definition
+\providecommand{\defeq}{:=}                          % defined as
+\providecommand{\eqqcolon}{=:\,}                     % reverse defined as
+\providecommand{\impl}{\Longrightarrow}              % implication
+\providecommand{\impliedby}{\Longleftarrow}      % fallback only; amsmath usually defines this
+\providecommand{\iff}{\Longleftrightarrow}        % fallback only; amsmath usually defines this
+\providecommand{\fa}{\forall}                        % for all
+\providecommand{\ex}{\exists}                        % there exists
+\providecommand{\nex}{\nexists}                      % there does not exist
+\providecommand{\AND}{\;\land\;}                     % logical and
+\providecommand{\OR}{\;\lor\;}                       % logical or
+\providecommand{\NOT}{\neg}                          % logical not
+\providecommand{\impliesby}[1]{\xRightarrow{#1}}     % implication with label
+\providecommand{\iffby}[1]{\xLeftrightarrow{#1}}     % equivalence with label
+\providecommand{\forces}{\Vdash}                     % forcing / semantic entailment
+\providecommand{\nforces}{\nVdash}                   % negated forcing
+\providecommand{\modelsr}{\models}                   % semantic models relation
+\providecommand{\vdashr}{\vdash}                     % syntactic derivability
+
+% ============================================================
+% SPACING / TEXT INSIDE MATH
+% ============================================================
+
+\providecommand{\txt}[1]{\text{#1}}                  % text in math mode
+\providecommand{\qqand}{\qquad\text{and}\qquad}      % spaced "and"
+\providecommand{\qqfor}{\qquad\text{for}\qquad}      % spaced "for"
+\providecommand{\qqif}{\qquad\text{if}\qquad}        % spaced "if"
+\providecommand{\qqwhere}{\qquad\text{where}\qquad}  % spaced "where"
+\providecommand{\qqwhen}{\qquad\text{when}\qquad}    % spaced "when"
+\providecommand{\qqwith}{\qquad\text{with}\qquad}    % spaced "with"
+\providecommand{\qqotherwise}{\qquad\text{otherwise}}% spaced "otherwise"
+\providecommand{\wrt}{\text{w.r.t.}}                 % with respect to
+\providecommand{\iid}{\text{i.i.d.}}                 % independent identically distributed
+\providecommand{\aev}{\text{a.e.}}                   % almost everywhere
+\providecommand{\as}{\text{a.s.}}                    % almost surely
+% Do not redefine TeX's primitive \wlog; it is used internally for logging.
+\providecommand{\WLOG}{\text{w.l.o.g.}}          % without loss of generality
+\providecommand{\etal}{\textit{et al.}}              % et al. text
+\providecommand{\rhs}{\text{RHS}}                    % right-hand side
+\providecommand{\lhs}{\text{LHS}}                    % left-hand side
+
+% ============================================================
+% STANDARD OPERATORS
+% ============================================================
+
+\DeclareMathOperator{\im}{im}                    % image of a map
+\DeclareMathOperator{\Image}{Im}                 % alternate image notation
+\DeclareMathOperator{\coker}{coker}              % cokernel
+\DeclareMathOperator{\rank}{rank}                % rank
+\DeclareMathOperator{\nullity}{nullity}          % nullity
+\DeclareMathOperator{\Span}{span}                % linear span
+\DeclareMathOperator{\proj}{proj}                % projection
+\DeclareMathOperator{\diag}{diag}                % diagonal matrix
+\DeclareMathOperator{\tr}{tr}                    % trace
+\DeclareMathOperator{\sgn}{sgn}                  % sign
+\DeclareMathOperator{\ord}{ord}                  % order
+\DeclareMathOperator{\Aut}{Aut}                  % automorphism group
+\DeclareMathOperator{\End}{End}                  % endomorphism ring
+\DeclareMathOperator{\Hom}{Hom}                  % Hom-set / Hom-space
+\DeclareMathOperator{\Ext}{Ext}                  % Ext functor
+\DeclareMathOperator{\Tor}{Tor}                  % Tor functor
+\DeclareMathOperator{\Sym}{Sym}                  % symmetric algebra / symmetric group
+\DeclareMathOperator{\Alt}{Alt}                  % alternating group / alternating forms
+\DeclareMathOperator{\Gal}{Gal}                  % Galois group
+\DeclareMathOperator{\Spec}{Spec}                % prime spectrum
+\DeclareMathOperator{\Proj}{Proj}                % projective spectrum
+\DeclareMathOperator{\Frac}{Frac}                % field of fractions
+\DeclareMathOperator{\Char}{char}                % characteristic
+\DeclareMathOperator{\Ann}{Ann}                  % annihilator
+\DeclareMathOperator{\supp}{supp}                % support
+\DeclareMathOperator{\Supp}{Supp}                % support, capitalized
+\DeclareMathOperator{\Res}{Res}                  % residue / restriction, context-dependent
+\DeclareMathOperator{\Ind}{Ind}                  % induction, index, indicator, context-dependent
+\DeclareMathOperator{\coim}{coim}                % coimage
+\DeclareMathOperator{\codim}{codim}              % codimension
+\DeclareMathOperator{\area}{area}                % area
+\DeclareMathOperator{\vol}{vol}                  % volume
+\DeclareMathOperator{\per}{per}                  % permanent / perimeter
+\DeclareMathOperator{\conv}{conv}                % convex hull
+\DeclareMathOperator{\cone}{cone}                % conical hull
+\DeclareMathOperator{\aff}{aff}                  % affine hull
+\DeclareMathOperator{\relint}{relint}            % relative interior
+\DeclareMathOperator{\dom}{dom}                  % domain of a function
+\DeclareMathOperator{\codom}{codom}              % codomain of a function
+\DeclareMathOperator{\epi}{epi}                  % epigraph
+\DeclareMathOperator{\hypo}{hypo}                % hypograph
+\DeclareMathOperator{\argmin}{arg\,min}          % argmin
+\DeclareMathOperator{\argmax}{arg\,max}          % argmax
+\DeclareMathOperator{\dist}{dist}                % distance
+\DeclareMathOperator{\diam}{diam}                % diameter
+\DeclareMathOperator{\rad}{rad}                  % radius
+\DeclareMathOperator{\volum}{Vol}                % capitalized volume
+\DeclareMathOperator{\gradop}{grad}              % gradient operator
+\DeclareMathOperator{\divop}{div}                % divergence operator
+\DeclareMathOperator{\curl}{curl}                % curl operator
+\DeclareMathOperator{\Lap}{\Delta}               % Laplacian operator
+\DeclareMathOperator{\esssup}{ess\,sup}          % essential supremum
+\DeclareMathOperator{\essinf}{ess\,inf}          % essential infimum
+\DeclareMathOperator{\osc}{osc}                  % oscillation
+\DeclareMathOperator{\Var}{Var}                  % variance
+\DeclareMathOperator{\Cov}{Cov}                  % covariance
+\DeclareMathOperator{\Corr}{Corr}                % correlation
+\DeclareMathOperator{\median}{median}            % median
+\DeclareMathOperator{\mode}{mode}                % mode
+\DeclareMathOperator{\sd}{sd}                    % standard deviation
+\DeclareMathOperator{\Bias}{Bias}                % bias
+\DeclareMathOperator{\MSE}{MSE}                  % mean squared error
+\DeclareMathOperator{\TV}{TV}                    % total variation
+\DeclareMathOperator{\KL}{KL}                    % Kullback-Leibler divergence
+\DeclareMathOperator{\erf}{erf}                  % Gaussian error function
+\DeclareMathOperator{\sinc}{sinc}                % sinc function
+\DeclareMathOperator{\poly}{poly}                % polynomially bounded
+\DeclareMathOperator{\polylog}{polylog}          % polylogarithmic
+\DeclareMathOperator{\lcm}{lcm}                  % least common multiple
+\DeclareMathOperator{\intr}{int}                 % interior / integer part, context-dependent
+\DeclareMathOperator{\Cl}{Cl}                    % closure operator
+\DeclareMathOperator{\Int}{Int}                  % interior operator
+\DeclareMathOperator{\Bd}{Bd}                    % boundary operator
+
+% ============================================================
+% ANALYSIS / CALCULUS MACROS
+% ============================================================
+
+\providecommand{\dd}{\,\mathrm{d}}                   % differential d
+\providecommand{\dx}{\,\mathrm{d}x}                  % dx
+\providecommand{\dy}{\,\mathrm{d}y}                  % dy
+\providecommand{\dz}{\,\mathrm{d}z}                  % dz
+\providecommand{\dt}{\,\mathrm{d}t}                  % dt
+\providecommand{\ds}{\,\mathrm{d}s}                  % ds
+\providecommand{\du}{\,\mathrm{d}u}                  % du
+\providecommand{\dv}{\,\mathrm{d}v}                  % dv
+\providecommand{\dw}{\,\mathrm{d}w}                  % dw
+\providecommand{\dr}{\,\mathrm{d}r}                  % dr
+\providecommand{\dmu}{\,\mathrm{d}\mu}               % dmu for measures
+\providecommand{\dlambda}{\,\mathrm{d}\lambda}       % dlambda for measures
+\providecommand{\dP}{\,\mathrm{d}\mathbb{P}}         % dP for probability measures
+\providecommand{\dQ}{\,\mathrm{d}\mathbb{Q}}         % dQ for probability measures
+
+\providecommand{\deriv}[2]{\frac{\mathrm{d}#1}{\mathrm{d}#2}}        % ordinary derivative
+\providecommand{\nderiv}[3]{\frac{\mathrm{d}^{#3}#1}{\mathrm{d}#2^{#3}}} % nth derivative
+\providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}         % partial derivative
+\providecommand{\npderiv}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}} % nth partial derivative
+\providecommand{\mixpderiv}[3]{\frac{\partial^{2} #1}{\partial #2 \partial #3}} % mixed partial
+\providecommand{\jac}{\mathrm{J}}                    % Jacobian symbol
+\providecommand{\hess}{\mathrm{Hess}}                % Hessian symbol
+\providecommand{\grad}{\nabla}                       % gradient symbol
+\providecommand{\laplacian}{\Delta}                  % Laplacian symbol
+\providecommand{\del}{\partial}                      % short partial alias
+
+\providecommand{\limn}{\lim_{n\to\infty}}            % limit as n tends to infinity
+\providecommand{\limk}{\lim_{k\to\infty}}            % limit as k tends to infinity
+\providecommand{\limx}{\lim_{x\to\infty}}            % limit as x tends to infinity
+\providecommand{\xtoinf}{x\to\infty}                 % x to infinity
+\providecommand{\ntoinf}{n\to\infty}                 % n to infinity
+\providecommand{\ktoinf}{k\to\infty}                 % k to infinity
+\providecommand{\epsdown}{\epsilon\downarrow 0}      % epsilon down to zero
+\providecommand{\dto}{\Rightarrow}                   % convergence in distribution alias
+\providecommand{\pto}{\xrightarrow{\mathbb{P}}}      % convergence in probability
+\providecommand{\asto}{\xrightarrow{\text{a.s.}}}    % almost sure convergence
+\providecommand{\lpto}{\xrightarrow{L^p}}            % convergence in L^p
+\providecommand{\wto}{\rightharpoonup}               % weak convergence
+\providecommand{\wstarto}{\overset{\ast}{\rightharpoonup}} % weak-star convergence
+
+% ============================================================
+% PROBABILITY / STOCHASTICS
+% ============================================================
+
+% Probability convention:
+% - Keep LaTeX's built-in \Pr operator for ordinary probability notation.
+% - Use \P for blackboard-bold probability measures; the original paragraph
+%   sign command is preserved as \pilcrow.
+\providecommand{\Prb}{\Pr}                           % legacy alias for \Pr
+\providecommand{\Exp}{\E}                            % legacy alias for expectation
+\providecommand{\CondExp}{\E}                        % conditional expectation base symbol
+\providecommand{\Prob}[1]{\Pr\!\left( #1 \right)}    % probability of event, operator style
+\providecommand{\Ex}[1]{\E\!\left[ #1 \right]}       % expectation of random variable
+\providecommand{\Excond}[2]{\E\!\left[ #1 \,\middle|\, #2 \right]} % conditional expectation
+\providecommand{\Probcond}[2]{\Pr\!\left( #1 \,\middle|\, #2 \right)} % conditional probability, operator style
+\providecommand{\Pof}[1]{\Prob{#1}}                  % short probability wrapper
+\providecommand{\Pcond}[2]{\Probcond{#1}{#2}}        % short conditional probability wrapper
+\providecommand{\Eof}[1]{\Ex{#1}}                    % short expectation wrapper
+\providecommand{\Econd}[2]{\Excond{#1}{#2}}          % short conditional expectation wrapper
+\providecommand{\Varof}[1]{\Var\!\left( #1 \right)}      % variance of variable
+\providecommand{\Covof}[2]{\Cov\!\left( #1, #2 \right)}  % covariance
+\providecommand{\Corrof}[2]{\Corr\!\left( #1, #2 \right)}% correlation
+\providecommand{\Ber}{\mathrm{Ber}}                 % Bernoulli distribution
+\providecommand{\Bin}{\mathrm{Bin}}                 % Binomial distribution
+\providecommand{\Poi}{\mathrm{Poi}}                 % Poisson distribution
+\providecommand{\Geom}{\mathrm{Geom}}               % Geometric distribution
+\providecommand{\NegBin}{\mathrm{NegBin}}           % Negative Binomial distribution
+\providecommand{\Hyp}{\mathrm{Hyp}}                 % Hypergeometric distribution
+\providecommand{\Unif}{\mathrm{Unif}}               % Uniform distribution
+\providecommand{\Normal}{\mathcal{N}}               % Normal distribution
+\providecommand{\ExpDist}{\mathrm{Exp}}             % Exponential distribution
+\providecommand{\GammaDist}{\mathrm{Gamma}}         % Gamma distribution
+\providecommand{\BetaDist}{\mathrm{Beta}}           % Beta distribution
+\providecommand{\Dir}{\mathrm{Dir}}                 % Dirichlet distribution
+\providecommand{\Law}{\mathcal{L}}                  % law/distribution of a random variable
+\providecommand{\given}{\,\middle|\,}               % conditional separator
+\providecommand{\indep}{\perp\!\!\!\perp}           % independence symbol
+\providecommand{\notindep}{\not\!\perp\!\!\!\perp}  % dependence symbol
+\providecommand{\Filtration}{(\mathcal{F}_t)_{t\ge 0}} % standard filtration notation
+\providecommand{\StoppingTime}{\tau}                % stopping time symbol
+\providecommand{\mart}[1]{\left( #1 \right)_{t\ge 0}} % generic time-indexed process
+\providecommand{\sgfield}[1]{\sigma\!\left( #1 \right)} % sigma algebra generated by object
+
+% ============================================================
+% COMBINATORICS / ENUMERATION
+% ============================================================
+
+\providecommand{\stirlingone}[2]{\genfrac{[}{]}{0pt}{}{#1}{#2}} % unsigned Stirling numbers of first kind
+\providecommand{\stirlingtwo}[2]{\genfrac{\{}{\}}{0pt}{}{#1}{#2}} % Stirling numbers of second kind
+\providecommand{\fallfac}[2]{#1^{\underline{#2}}}   % falling factorial
+\providecommand{\risefac}[2]{#1^{\overline{#2}}}    % rising factorial
+\providecommand{\multinom}[2]{\binom{#1}{#2}}       % multinomial-ish alias, adapt manually if desired
+\providecommand{\genfun}{\mathcal{G}}               % generic generating function
+\providecommand{\ogf}{\mathrm{OGF}}                 % ordinary generating function
+\providecommand{\egf}{\mathrm{EGF}}                 % exponential generating function
+\providecommand{\Coeff}[2]{\left[ #1 \right] #2}    % coefficient extraction [x^n]f(x)
+\providecommand{\constterm}[1]{\left[ 1 \right] #1} % constant term extraction
+\providecommand{\Cat}{\mathrm{Cat}}                 % Catalan numbers, context-dependent
+\providecommand{\Part}{\mathrm{Part}}               % partition family / partition numbers
+\providecommand{\Bell}{\mathrm{Bell}}               % Bell numbers
+\providecommand{\Des}{\mathrm{Des}}                 % descent set
+\providecommand{\Asc}{\mathrm{Asc}}                 % ascent set
+\providecommand{\Inv}{\mathrm{Inv}}                 % inversion set
+\providecommand{\maj}{\mathrm{maj}}                 % major index
+\providecommand{\exc}{\mathrm{exc}}                 % excedance number
+\providecommand{\cyc}{\mathrm{cyc}}                 % number of cycles
+\providecommand{\Fix}{\mathrm{Fix}}                 % fixed points
+\providecommand{\sur}{\twoheadrightarrow}           % surjection arrow
+\providecommand{\injto}{\hookrightarrow}            % injection arrow
+\providecommand{\powset}[1]{2^{#1}}                 % power set size notation
+\providecommand{\restrset}[2]{\left. #1 \right|_{#2}} % restriction of object to subset
+
+% ============================================================
+% GRAPH THEORY / HYPERGRAPH THEORY
+% ============================================================
+
+\providecommand{\De}{\Delta}                    % maximum degree
+\providecommand{\de}{\delta}                    % minimum degree
+\providecommand{\avgdeg}{d}                         % average degree
+\providecommand{\cdeg}{\deg_2}                     % codegree
+% Keep LaTeX's built-in \deg operator. Typical usage: \deg v, \deg_G(v), \deg(v).
+\providecommand{\degof}[1]{\deg\!\left( #1 \right)} % function-style degree wrapper
+\providecommand{\codeg}[2]{\deg\!\left( #1, #2 \right)} % codegree of a pair
+\providecommand{\nbhd}[1]{N\!\left( #1 \right)}     % neighborhood
+\providecommand{\nbhdc}[1]{N^{c}\!\left( #1 \right)}% complement neighborhood
+\providecommand{\closednbhd}[1]{N\!\left[ #1 \right]} % closed neighborhood
+\providecommand{\opennbhd}[1]{N\!\left( #1 \right)} % open neighborhood
+\providecommand{\distg}[2]{\mathrm{dist}\!\left( #1, #2 \right)} % graph distance
+\providecommand{\diamg}[1]{\mathrm{diam}\!\left( #1 \right)} % graph diameter
+\providecommand{\radg}[1]{\mathrm{rad}\!\left( #1 \right)}  % graph radius
+\providecommand{\conn}{\kappa}                      % vertex connectivity
+\providecommand{\edgeconn}{\lambda}                 % edge connectivity
+\providecommand{\cliquenum}{\omega}                % clique number
+\providecommand{\indnum}{\alpha}                    % independence number
+\providecommand{\chromnum}{\chi}                    % chromatic number
+\providecommand{\fracchromnum}{\chi_f}              % fractional chromatic number
+\providecommand{\listchromnum}{\chi_\ell}           % list chromatic number
+\providecommand{\chf}{\fracchromnum}                % short fractional chromatic number alias
+\providecommand{\listch}{\listchromnum}             % short list chromatic number alias
+\providecommand{\tw}{\mathrm{tw}}                   % treewidth
+\providecommand{\pw}{\mathrm{pw}}                   % pathwidth
+\providecommand{\bw}{\mathrm{bw}}                   % branchwidth / bandwidth, context-dependent
+\providecommand{\exnum}{\mathrm{ex}}                % extremal number
+\providecommand{\Forb}{\mathrm{Forb}}               % forbidden family
+\providecommand{\HomDen}{t}                         % homomorphism density base
+\providecommand{\Link}{\mathrm{Lk}}                 % link graph / link hypergraph
+\providecommand{\Shadow}{\partial}                  % shadow operator
+\providecommand{\upshadow}{\partial^{+}}            % upper shadow
+\providecommand{\downshadow}{\partial^{-}}          % lower shadow
+\providecommand{\match}{\nu}                        % matching number
+\providecommand{\cover}{\tau}                       % vertex cover number
+\providecommand{\transnum}{\tau}                    % transversal number
+\providecommand{\packnum}{\nu}                      % packing number
+\providecommand{\edgeset}[1]{E\!\left( #1 \right)}  % edge set of graph
+\providecommand{\vertexset}[1]{V\!\left( #1 \right)}% vertex set of graph
+\providecommand{\compnum}{c}                        % number of components
+\providecommand{\Path}{\mathrm{Path}}               % path family
+\providecommand{\Cycle}{\mathrm{Cycle}}             % cycle family
+\providecommand{\Tree}{\mathrm{Tree}}               % tree family
+\providecommand{\Match}{\mathrm{Match}}             % matching family
+\providecommand{\Cut}{\mathrm{Cut}}                 % cut notation
+\providecommand{\lap}{L}                            % graph Laplacian
+\providecommand{\signlesslap}{Q}                    % signless Laplacian
+\providecommand{\adj}{A}                            % adjacency matrix
+\providecommand{\spec}{\mathrm{Spec}}               % spectrum
+\providecommand{\spr}{\rho}                         % spectral radius
+\providecommand{\eig}{\lambda}                      % eigenvalue symbol
+\providecommand{\linf}{\ell_\infty}                 % infinity sequence space
+\providecommand{\lone}{\ell_1}                      % l1 sequence space
+\providecommand{\ltwo}{\ell_2}                      % l2 sequence space
+\providecommand{\kgraph}{k\text{-graph}}            % k-uniform hypergraph
+
+% ============================================================
+% LINEAR ALGEBRA / MATRIX ANALYSIS
+% ============================================================
+
+\providecommand{\trans}{^{\mathsf T}}               % transpose
+\providecommand{\ctrans}{^{\ast}}                   % conjugate transpose / adjoint
+\providecommand{\pinv}{^{\dagger}}                  % Moore-Penrose pseudoinverse
+\providecommand{\trace}{\operatorname{tr}}          % trace
+\providecommand{\Det}{\operatorname{det}}           % determinant
+\providecommand{\adjugate}{\operatorname{adj}}      % adjugate matrix
+\providecommand{\spann}[1]{\operatorname{span}\!\left\{ #1 \right\}} % span with braces
+\providecommand{\linspan}[1]{\Span\!\left\{ #1 \right\}} % alternate span
+\providecommand{\Row}{\operatorname{Row}}           % row space
+\providecommand{\Col}{\operatorname{Col}}           % column space
+\providecommand{\Null}{\operatorname{Null}}         % null space
+\providecommand{\Range}{\operatorname{Range}}       % range
+\providecommand{\Ker}{\operatorname{Ker}}           % kernel
+\providecommand{\eigvals}{\operatorname{spec}}      % spectrum / eigenvalues
+\providecommand{\traceof}[1]{\operatorname{tr}\!\left( #1 \right)} % trace of matrix
+\providecommand{\detof}[1]{\operatorname{det}\!\left( #1 \right)}  % determinant of matrix
+\providecommand{\rankof}[1]{\operatorname{rank}\!\left( #1 \right)}% rank of matrix
+\providecommand{\nullityof}[1]{\operatorname{nullity}\!\left( #1 \right)} % nullity
+\providecommand{\diagof}[1]{\operatorname{diag}\!\left( #1 \right)}% diagonal matrix from entries
+\providecommand{\ip}[2]{\left\langle #1, #2 \right\rangle}         % inner product
+\providecommand{\opnorm}[1]{\left\| #1 \right\|_{\mathrm{op}}}     % operator norm
+\providecommand{\frobnorm}[1]{\left\| #1 \right\|_{\mathrm{F}}}    % Frobenius norm
+\providecommand{\spnorm}[1]{\left\| #1 \right\|_{2}}               % spectral norm
+\providecommand{\condnum}[1]{\kappa\!\left( #1 \right)}            % condition number
+\providecommand{\Rayleigh}[2]{\frac{\left\langle #1,#2 #1 \right\rangle}{\left\langle #1,#1 \right\rangle}} % Rayleigh quotient
+
+% ============================================================
+% ABSTRACT ALGEBRA / NUMBER THEORY
+% ============================================================
+
+\providecommand{\ideal}[1]{\left\langle #1 \right\rangle}          % generated ideal / subgroup
+\providecommand{\genby}[1]{\left\langle #1 \right\rangle}          % generated-by notation
+\providecommand{\normal}{\trianglelefteq}                          % normal subgroup symbol
+\providecommand{\idealof}{\trianglelefteq}                         % ideal-like placeholder if desired
+\providecommand{\subgp}{\leq}                                      % subgroup symbol
+\providecommand{\isomto}{\xrightarrow{\sim}}                       % isomorphism arrow
+\providecommand{\quot}[2]{#1 / #2}                                 % quotient
+\providecommand{\units}[1]{#1^{\times}}                            % unit group
+\providecommand{\clgp}{\mathrm{Cl}}                                % class group
+\providecommand{\Pic}{\mathrm{Pic}}                                % Picard group
+\providecommand{\Br}{\mathrm{Br}}                                  % Brauer group
+\providecommand{\Galof}[1]{\Gal\!\left( #1 \right)}                % Galois group of extension
+\providecommand{\Autof}[1]{\Aut\!\left( #1 \right)}                % automorphism group
+\providecommand{\Endof}[1]{\End\!\left( #1 \right)}                % endomorphism ring
+\providecommand{\Homof}[2]{\Hom\!\left( #1,#2 \right)}             % Hom-set
+\providecommand{\Charpoly}{\chi}                                   % characteristic polynomial symbol
+\providecommand{\Minpoly}{\mu}                                     % minimal polynomial symbol
+\providecommand{\Syl}{\mathrm{Syl}}                                % Sylow family
+\providecommand{\GL}{\mathrm{GL}}                                  % general linear group
+\providecommand{\SL}{\mathrm{SL}}                                  % special linear group
+\providecommand{\PSL}{\mathrm{PSL}}                                % projective special linear group
+\providecommand{\PGL}{\mathrm{PGL}}                                % projective general linear group
+\providecommand{\SO}{\mathrm{SO}}                                  % special orthogonal group
+\providecommand{\OOg}{\mathrm{O}}                                  % orthogonal group
+\providecommand{\SU}{\mathrm{SU}}                                  % special unitary group
+\providecommand{\UU}{\mathrm{U}}                                   % unitary group
+\providecommand{\Sp}{\mathrm{Sp}}                                  % symplectic group
+\providecommand{\Mat}{\mathrm{Mat}}                                % matrix algebra
+\providecommand{\Specm}{\mathrm{Specm}}                            % maximal spectrum
+\providecommand{\Jac}{\mathrm{Jac}}                                % Jacobson radical / Jacobian, context-dependent
+\providecommand{\Nil}{\mathrm{Nil}}                                % nilradical
+\providecommand{\tors}{\mathrm{tors}}                              % torsion subgroup subscript/label
+\providecommand{\Div}{\mathrm{Div}}                                % divisor group
+\providecommand{\disc}{\mathrm{disc}}                              % discriminant
+\providecommand{\Norm}{\mathrm{N}}                                 % norm map
+\providecommand{\Tr}{\mathrm{Tr}}                               % field trace
+\providecommand{\ClassNo}{h}                                       % class number
+
+% ============================================================
+% TOPOLOGY / GEOMETRY / DIFFERENTIAL GEOMETRY
+% ============================================================
+
+\providecommand{\Top}{\mathrm{Top}}                 % category of topological spaces
+\providecommand{\Man}{\mathrm{Man}}                 % category of manifolds
+\providecommand{\Open}{\mathcal{O}}                 % open sets family
+\providecommand{\cov}{\mathcal{U}}                  % open cover
+\providecommand{\atlas}{\mathcal{A}}                % atlas
+\providecommand{\chart}{(U,\varphi)}                % chart notation
+\providecommand{\Ball}[2]{B_{#2}\!\left( #1 \right)} % open ball centered at point
+\providecommand{\ClosedBall}[2]{\overline{B}_{#2}\!\left( #1 \right)} % closed ball
+\providecommand{\Sphere}[2]{S_{#2}\!\left( #1 \right)} % sphere centered at point
+\providecommand{\Lie}{\mathrm{Lie}}                 % Lie algebra of a Lie group
+\providecommand{\Tangent}{\mathrm{T}}               % tangent bundle / tangent space functor
+\providecommand{\Cotangent}{\mathrm{T}^{\ast}}      % cotangent bundle
+\providecommand{\dR}{\mathrm{dR}}                   % de Rham
+\providecommand{\Ric}{\mathrm{Ric}}                 % Ricci curvature
+\providecommand{\Scal}{\mathrm{Scal}}               % scalar curvature
+\providecommand{\Sec}{\mathrm{Sec}}                 % sectional curvature
+\providecommand{\Vol}{\mathrm{Vol}}                 % volume
+\providecommand{\Area}{\mathrm{Area}}               % area
+\providecommand{\diameter}{\mathrm{diam}}           % diameter
+\providecommand{\injrad}{\mathrm{inj}}              % injectivity radius
+\providecommand{\geod}{\gamma}                      % generic geodesic
+\providecommand{\forms}[1]{\Omega^{#1}}             % differential forms of degree #
+\providecommand{\LieDer}{\mathcal{L}}               % Lie derivative
+\providecommand{\ExtDer}{\mathrm{d}}                % exterior derivative
+\providecommand{\InteriorProd}{\iota}               % interior product
+
+% ============================================================
+% OPTIMIZATION / CONVEXITY / LP / KKT
+% ============================================================
+
+\providecommand{\opt}{\mathrm{opt}}                 % optimal value
+\providecommand{\OPT}{\mathrm{OPT}}                 % optimal solution/value
+\providecommand{\LP}{\mathrm{LP}}                   % linear program
+\providecommand{\ILP}{\mathrm{ILP}}                 % integer linear program
+\providecommand{\IP}{\mathrm{IP}}                   % integer program
+\providecommand{\QP}{\mathrm{QP}}                   % quadratic program
+\providecommand{\SDP}{\mathrm{SDP}}                 % semidefinite program
+\providecommand{\KKT}{\mathrm{KKT}}                 % Karush-Kuhn-Tucker
+\providecommand{\feas}{\mathrm{feas}}               % feasible region / feasible solutions
+\providecommand{\obj}{\mathrm{obj}}                 % objective function
+\providecommand{\val}{\mathrm{val}}                 % objective value
+\providecommand{\optval}{v^\star}                   % optimal objective value
+\providecommand{\dualgap}{\mathrm{gap}}             % duality gap
+\providecommand{\prox}{\mathrm{prox}}               % proximal operator
+\providecommand{\proxof}[2]{\mathrm{prox}_{#1}\!\left( #2 \right)} % prox_f(x)
+\providecommand{\subdiff}{\partial}                 % subdifferential
+\providecommand{\normalcone}{N}                     % normal cone
+\providecommand{\tangentcone}{T}                    % tangent cone
+\providecommand{\indicator}{\delta}                 % indicator function of a set
+\providecommand{\Lag}{\mathcal{L}}                  % Lagrangian
+\providecommand{\dualfun}{g}                        % dual function
+\providecommand{\primal}{\mathrm{P}}                % primal problem label
+\providecommand{\dual}{\mathrm{D}}                  % dual problem label
+\providecommand{\slack}{s}                          % slack variable
+\providecommand{\redcost}{\bar{c}}                  % reduced cost
+\providecommand{\coneof}[1]{\operatorname{cone}\!\left( #1 \right)} % cone generated by set
+\providecommand{\convof}[1]{\operatorname{conv}\!\left( #1 \right)} % convex hull
+\providecommand{\affof}[1]{\operatorname{aff}\!\left( #1 \right)}   % affine hull
+\providecommand{\epiof}[1]{\operatorname{epi}\!\left( #1 \right)}   % epigraph
+\providecommand{\hypoof}[1]{\operatorname{hypo}\!\left( #1 \right)} % hypograph
+\providecommand{\argminset}[1]{\operatorname*{arg\,min}\left\{ #1 \right\}} % argmin set-builder
+\providecommand{\argmaxset}[1]{\operatorname*{arg\,max}\left\{ #1 \right\}} % argmax set-builder
+% ===================================================
+% ASYMPTOTICS / COMPLEXITY / COMPUTER SCIENCE
+% ============================================================
+
+\let\Math@orig@Oslash\O                          % preserve original uppercase O-slash
+\let\Math@orig@oslashletter\o                    % preserve original lowercase o-slash
+\providecommand{\Oslash}{}
+\providecommand{\oslashletter}{}
+\renewcommand{\Oslash}{\ifmmode\text{\Math@orig@Oslash}\else\Math@orig@Oslash\fi}
+\renewcommand{\oslashletter}{\ifmmode\text{\Math@orig@oslashletter}\else\Math@orig@oslashletter\fi}
+\renewcommand{\O}{\ensuremath{O}}                % big-O notation
+\renewcommand{\o}{\ensuremath{o}}                % little-o notation
+% Do not reuse \oslash for the lowercase O-slash letter; amssymb defines it as a math symbol.
+\providecommand{\Omegabig}{\Omega}                  % big-Omega
+\providecommand{\Thetabig}{\Theta}                  % big-Theta
+\providecommand{\softO}{\widetilde{\mathcal{O}}}   % soft-O
+\providecommand{\softOmega}{\widetilde{\Omega}}     % soft-Omega
+\providecommand{\softTheta}{\widetilde{\Theta}}     % soft-Theta
+\providecommand{\Time}{\mathrm{Time}}               % complexity class operator
+\providecommand{\Space}{\mathrm{Space}}             % space complexity operator
+\providecommand{\class}[1]{\ensuremath{\mathsf{#1}}} % complexity class font
+\providecommand{\Pclass}{\class{P}}                 % class P
+\providecommand{\NPclass}{\class{NP}}               % class NP
+\providecommand{\coNP}{\class{coNP}}                % class coNP
+\providecommand{\BPP}{\class{BPP}}                  % BPP
+\providecommand{\RP}{\class{RP}}                    % RP
+\providecommand{\ZPP}{\class{ZPP}}                  % ZPP
+\providecommand{\PSPACE}{\class{PSPACE}}            % PSPACE
+\providecommand{\EXP}{\class{EXP}}                  % EXP
+% \poly is declared above as an operator. Use \poly n or \poly(n).
+\providecommand{\bit}{\{0,1\}}                      % bit alphabet
+\providecommand{\bitn}{\{0,1\}^n}                   % bit strings of length n
+
+% ============================================================
+% SPECIAL FUNCTION NAMES / COMMON CONSTANTS
+% ============================================================
+
+\providecommand{\e}{\mathrm{e}}                     % Euler's number
+\providecommand{\ii}{\mathrm{i}}                    % imaginary unit
+\providecommand{\jj}{\mathrm{j}}                    % alternate imaginary unit
+\providecommand{\half}{\tfrac{1}{2}}                % one-half
+\providecommand{\third}{\tfrac{1}{3}}               % one-third
+\providecommand{\quarter}{\tfrac{1}{4}}             % one-quarter
+\providecommand{\invn}{n^{-1}}                      % reciprocal of n
+\providecommand{\invk}{k^{-1}}                      % reciprocal of k
+\providecommand{\invx}{x^{-1}}                      % reciprocal of x
+
+% ============================================================
+% SUMS / PRODUCTS / INTEGRALS 
+% ============================================================
+
+\providecommand{\sumn}{\sum_{n=1}^{\infty}}         % infinite sum over n
+\providecommand{\sumi}{\sum_{i=1}^{\infty}}         % infinite sum over i
+\providecommand{\sumj}{\sum_{j=1}^{\infty}}         % infinite sum over j
+\providecommand{\sumk}{\sum_{k=1}^{\infty}}         % infinite sum over k
+\providecommand{\prodn}{\prod_{n=1}^{\infty}}       % infinite product over n
+\providecommand{\prodi}{\prod_{i=1}^{\infty}}       % infinite product over i
+\providecommand{\prodj}{\prod_{j=1}^{\infty}}       % infinite product over j
+\providecommand{\intR}{\int_{\R}}                   % integral over reals
+\providecommand{\intRd}{\int_{\R^d}}                % integral over R^d
+\providecommand{\sumsub}[2]{\sum_{\substack{#1\\#2}}} % sum with two stacked conditions
+\providecommand{\prodsub}[2]{\prod_{\substack{#1\\#2}}} % product with two stacked conditions
+\providecommand{\bigun}{\bigcup}                 % big union alias
+\providecommand{\bigint}{\bigcap}                 % big intersection alias
+
+% ============================================================
+% CASES / PIECEWISE / TAGGING HELPERS
+% ============================================================
+
+\providecommand{\caseif}{\quad\text{if }\quad}      % "if" in cases
+\providecommand{\casefor}{\quad\text{for }\quad}    % "for" in cases
+\providecommand{\caseotherwise}{\quad\text{otherwise}} % "otherwise" in cases
+\providecommand{\eqtag}[1]{\tag{\text{#1}}}         % textual equation tag
+\providecommand{\namedeq}[1]{\tag{#1}}              % named equation tag
+
+% ============================================================
+% THEOREM-LIKE SHORTCUTS INSIDE PROOFS
+% ============================================================
+
+\providecommand{\claimproof}{\noindent\textit{Proof of claim: }} % proof-of-claim lead-in
+\providecommand{\pf}{\noindent\textit{Proof. }}                  % proof lead-in
+\providecommand{\qedbox}{\hfill$\square$}                        % manual QED box
+\providecommand{\contradiction}{\Rightarrow\!\Leftarrow}         % contradiction marker
+\providecommand{\bydef}{\overset{\mathrm{def}}{=}}               % by definition equality
+\providecommand{\byih}{\overset{\mathrm{IH}}{\Longrightarrow}}   % by induction hypothesis
+\providecommand{\bycs}{\overset{\mathrm{CS}}{\le}}               % by Cauchy-Schwarz
+\providecommand{\byamgm}{\overset{\mathrm{AM\text{-}GM}}{\ge}}   % by AM-GM
+
+
+
+
+
+
+
+
+% Optional TikZ style presets (only active when package option enables TikZ).
+% These give consistent default styling for quick graph sketches.
+\ifMath@tikz
+\tikzset{
+  vertex/.style = {circle, draw=Blue, fill=LightBlue!40,
+                   minimum size=18pt, inner sep=0pt},
+  edge/.style   = {line width=0.9pt, draw=Indigo},
+  directed/.style = {->, >=stealth, line width=0.9pt, draw=Navy}
+}
+\fi
+
+% ------------------------------
+% Starred Section Behavior
+% ------------------------------
+% Default behavior in this template follows standard LaTeX:
+% - \section* and \subsection* are unnumbered.
+% - They do not advance counters.
+% - They are not inserted into the table of contents unless the document asks.
+%
+% Optional legacy/notes behavior:
+% Load [structuredsections] if you want starred headings to behave as structured
+% titled blocks:
+% - \section* and \subsection* still advance counters.
+% - They are included in the table of contents.
+% - Section-based theorem numbering stays consistent even with starred headings.
+\ifMath@structuredsections
+  \let\Math@orig@section\section
+  \RenewDocumentCommand{\section}{s o m}{%
+    \IfBooleanTF{#1}{%
+      \refstepcounter{section}%
+      \IfNoValueTF{#2}{%
+        \Math@orig@section*{#3}%
+        \addcontentsline{toc}{section}{\thesection\quad #3}%
+      }{%
+        \Math@orig@section*{#3}%
+        \addcontentsline{toc}{section}{\thesection\quad #2}%
+      }%
+      \sectionmark{#3}%
+    }{%
+      \IfNoValueTF{#2}{\Math@orig@section{#3}}{\Math@orig@section[#2]{#3}}%
+    }%
+  }
+
+  \let\Math@orig@subsection\subsection
+  \RenewDocumentCommand{\subsection}{s o m}{%
+    \IfBooleanTF{#1}{%
+      \refstepcounter{subsection}%
+      \IfNoValueTF{#2}{%
+        \Math@orig@subsection*{#3}%
+        \addcontentsline{toc}{subsection}{\thesubsection\quad #3}%
+      }{%
+        \Math@orig@subsection*{#3}%
+        \addcontentsline{toc}{subsection}{\thesubsection\quad #2}%
+      }%
+    }{%
+      \IfNoValueTF{#2}{\Math@orig@subsection{#3}}{\Math@orig@subsection[#2]{#3}}%
+    }%
+  }
+\fi
+
+
+
+
+
+
