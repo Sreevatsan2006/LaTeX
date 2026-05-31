@@ -1,3 +1,4 @@
+# CONTEXT.md — LLM Guide for This LaTeX Style Suite
 
 This file is written for LLMs (Claude, GPT, etc.) assisting with documents that use this style suite. Read this before generating or editing any `.tex` .
 
