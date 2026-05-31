@@ -1,0 +1,154 @@
+\documentclass[10pt]{article}
+\usepackage{Assignment}
+
+\renewcommand{\YourName}{John Doe}
+\renewcommand{\CourseName}{MATH 123}
+\renewcommand{\AssignmentNumber}{0}
+\renewcommand{\AssignmentTitle}{Demo}
+
+
+\begin{document}
+\MakeTitleBlock
+
+% ---------------------------------------------------------------
+%  Problem 1 — Analysis
+% ---------------------------------------------------------------
+
+\begin{problem}[1][Analysis]
+Let $(X, \mathcal{F}, \mu)$ be a measure space and $\set{f_n}_{n=1}^{\infty}$ a sequence
+of measurable functions $f_n : X \to \R$.
+
+\begin{parts}
+    \item Suppose $\sumn \intX \abs{f_n} \dmu < \infty$. Prove that
+    \[
+        \intX \sumn f_n \dmu \;=\; \sumn \intX f_n \dmu,
+    \]
+    i.e.\ that integration and summation may be interchanged.
+
+    \item Let $a_n \ge 0$ and suppose $\sumn a_n < \infty$. Using the inequality
+    $\log(1 + t) \le t$ for $t \ge 0$, show that the infinite product
+    $\prodn (1 + a_n)$ converges, and that
+    \[
+        \prodn (1 + a_n) \;\le\; \exp\!\paren{\sumn a_n} \;<\; \infty.
+    \]
+\end{parts}
+\end{problem}
+
+\begin{solution}
+\begin{parts}
+    \item Define $g \defeq \sumn \abs{f_n}$. By the Monotone Convergence Theorem applied
+    to the partial sums $g_N = \sum_{n=1}^{N} \abs{f_n} \nearrow g$,
+    \[
+        \intX g \dmu \;=\; \intX \sumn \abs{f_n} \dmu
+        \;=\; \limn \sum_{k=1}^{n} \intX \abs{f_k} \dmu
+        \;=\; \sumn \intX \abs{f_n} \dmu \;<\; \infty.
+    \]
+    Hence $g \in L^1(\mu)$, so $\abs{\sumn f_n} \le g$ provides an integrable
+    dominating function. Applying the Dominated Convergence Theorem to the partial sums
+    $S_N \defeq \sum_{n=1}^{N} f_n \to \sumn f_n$ pointwise,
+    \[
+        \intX \sumn f_n \dmu
+        \;=\; \limn \intX \sum_{k=1}^{n} f_k \dmu
+        \;=\; \limn \sum_{k=1}^{n} \intX f_k \dmu
+        \;=\; \sumn \intX f_n \dmu. \qed
+    \]
+    \bigskip 
+    
+    \item For each finite partial product, taking logarithms and applying $\log(1+t) \le t$,
+    \[
+        \log \prod_{n=1}^{N}(1 + a_n)
+        \;=\; \sum_{n=1}^{N} \log(1 + a_n)
+        \;\le\; \sum_{n=1}^{N} a_n
+        \;\le\; \sumn a_n \;<\; \infty.
+    \]
+    Since $a_n \ge 0$, the partial products are monotone increasing and bounded above by
+    $\exp\!\paren{\sumn a_n}$, hence converge. Taking $N \to \infty$,
+    \[
+        \prodn (1 + a_n) \;\le\; \exp\!\paren{\sumn a_n} \;<\; \infty. 
+    \]
+\end{parts}
+\end{solution}
+
+% ---------------------------------------------------------------
+%  Problem 1 — Algebra
+% ---------------------------------------------------------------
+
+
+\begin{problem}[2][Abstract Algebra]
+Recall that a sequence of $R$-modules
+\[
+    0 \longto A \xto{\iota} B \xto{\pi} C \longto 0
+\]
+is \emph{short exact} if $\iota : A \into B$ is injective, $\pi : B \onto C$ is surjective,
+and $\im(\iota) = \ker(\pi)$.
+
+\begin{parts}
+    \item Prove that the sequence splits --- i.e.\ $B \isom A \directsum C$ compatibly
+    with $\iota$ and $\pi$ --- if and only if:
+    \begin{enumerate}
+        \item[(i)] there exists an $R$-module homomorphism $\sigma : C \into B$
+              such that $\pi \circ \sigma = \id_C$ (a \emph{section} of $\pi$), and equivalently,
+        \item[(ii)] there exists an $R$-module homomorphism $\rho : B \onto A$
+              such that $\rho \circ \iota = \id_A$ (a \emph{retraction} of $\iota$).
+    \end{enumerate}
+    Construct the splitting isomorphism $\phi : B \toiso A \directsum C$ explicitly in each case.
+
+    \item State the Structure Theorem for finitely generated modules over a PID $R$,
+    and identify the two canonical forms it produces.
+\end{parts}
+\end{problem}
+
+\begin{solution}
+\begin{parts}
+    \item We prove both equivalences; by symmetry it suffices to show each direction for (i),
+    then observe (ii) is entirely dual.
+
+    \medskip
+    \textbf{Section $\sigma$ gives splitting.}
+    Suppose $\sigma : C \into B$ satisfies $\pi \circ \sigma = \id_C$. Define
+    \[
+        \phi : B \longto A \directsum C, \qquad
+        \phi(b) \;\defeq\; \bigl(b - \sigma(\pi(b)),\; \pi(b)\bigr),
+    \]
+    where we regard $A \embed B$ via $\iota$ (exactness makes this unambiguous). $\phi$ is
+    $R$-linear since $\pi$ and $\sigma$ are. 
+    \medskip
+    
+    \textit{Injective}: if $\phi(b) = 0$ then $\pi(b) = 0$ and $b = \sigma(0) = 0$.
+    
+    \textit{Surjective}: given $(a, c) \in A \directsum C$, set $b = \iota(a) + \sigma(c)$;
+    one checks $\phi(b) = (a, c)$.
+    \medskip
+    
+    Hence $\phi : B \toiso A \directsum C$, and by construction $\phi \circ \iota = \iota_A$
+    and $\pi_C \circ \phi = \pi$, so the splitting is compatible. \qedbox
+    \medskip
+    
+    \textbf{Splitting gives section.}
+    If $\phi : B \toiso A \directsum C$ compatibly, set
+    $\sigma \defeq \phi^{-1} \circ \iota_C : C \into B$
+    where $\iota_C : C \into A \directsum C$ is the canonical inclusion. Then
+    $\pi \circ \sigma = \pi_C \circ \phi \circ \phi^{-1} \circ \iota_C = \id_C$. \qedbox
+    \medskip
+    
+    \textbf{Retraction $\rho$ gives splitting.}
+Define $\psi : A \directsum C \longto B$ by choosing any lift $\tilde{b} \in \pi^{-1}(c)$ and setting
+\[
+    \psi(a, c) \;\defeq\; \iota(a) + \tilde{b} - \iota(\rho(\tilde{b})).
+\]
+The term $\tilde{b} - \iota(\rho(\tilde{b}))$ lies in $\ker\rho = \im\iota$ and depends only on $c$ (not the choice of lift), so $\psi$ is well-defined and $R$-linear. One verifies $b \mapsto (\rho(b), \pi(b))$ is its inverse, giving $B \toiso A \directsum C$.
+\qedbox
+    \bigskip 
+    
+    \item Let $M$ be a finitely generated module over a PID $R$. Then
+    \[
+        M \;\isom\; R^r \directsum \bigoplus_{i=1}^{k} \quot{R}{\ideal{d_i}},
+    \]
+    where $r \ge 0$ is the \emph{free rank} and $d_1 \mid d_2 \mid \cdots \mid d_k$ are
+    nonzero non-unit \emph{invariant factors} in $R$ (\textbf{invariant factor form}).
+    Equivalently, each torsion summand decomposes into primary pieces
+    $\quot{R}{\ideal{p^e}}$ via CRT, giving the \textbf{primary decomposition form}.
+    Both are unique up to associates.
+\end{parts}
+\end{solution}
+\end{document}

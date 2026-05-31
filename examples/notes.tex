@@ -1,0 +1,577 @@
+\documentclass[11pt]{article}
+\usepackage{Math}
+\PaperColorMode{balanced}
+\begin{document}
+\title{Max-Flow Min-Cut Theorem}
+\author{}
+\date{}
+\maketitle
+
+\begin{abstract}
+    We develop the theory of flows in networks --- introducing flow networks, cuts, residual networks, and augmenting paths --- and give a complete proof of the Max-Flow Min-Cut Theorem via augmenting paths. All necessary lemmas towards establishing the equivalence between maximum flows and minimum $s$--$t$ cuts are presented and proved. We also derive fundamental corollaries, including integrality of maximum flows with integral capacities.
+\end{abstract}
+
+\section{Flow Networks}
+
+We begin by formalizing the central objects of study.
+
+\begin{definition}[Directed graph]
+A \emph{directed graph} is a pair $G=(V,E)$ where $V$ is a finite set of
+\emph{vertices} and $E \subseteq V \times V$ is a set of ordered pairs called
+\emph{directed edges} or simply \emph{edges}. If $(u,v)\in E$ we say there is
+an edge from $u$ to $v$ and write $u \to v$.
+\end{definition}
+
+\begin{definition}[Flow network]
+A \emph{flow network} is a quadruple
+\[
+  N = (G,c,s,t)
+\]
+where
+\begin{itemize}[itemsep=0.2em]
+  \item $G=(V,E)$ is a finite directed graph,
+  \item $c : E \to \R_{\ge 0}$ is a \emph{capacity function} assigning to each
+        edge $e\in E$ a nonnegative real number $c(e)$,
+  \item $s \in V$ is a distinguished vertex called the \emph{source}, and
+  \item $t \in V$ is a distinguished vertex called the \emph{sink}, with
+        $s \ne t$.
+\end{itemize}
+We assume there are no edges entering $s$ and no edges leaving $t$; this can
+always be enforced by standard transformations without changing the theory.
+\end{definition}
+
+We interpret $c(u,v)$ as the maximum amount of ``flow'' that can be sent along
+edge $(u,v)$ per unit time.
+
+\begin{definition}[Flow]
+Let $N=(G,c,s,t)$ be a flow network with $G=(V,E)$.
+A \emph{flow} is a function $f : E \to \R_{\ge 0}$ satisfying
+\begin{enumerate}[label=(\roman*), itemsep=0.2em]
+  \item \textbf{Capacity constraints.} For every edge $e\in E$,
+  \[
+    0 \le f(e) \le c(e).
+  \]
+  \item \textbf{Flow conservation.} For every vertex $v \in V \setminus \{s,t\}$,
+  \[
+    \sum_{(u,v)\in E} f(u,v) = \sum_{(v,w)\in E} f(v,w).
+  \]
+  That is, total inflow equals total outflow at every intermediate vertex.
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Value of a flow]
+Let $f$ be a flow. The \emph{value} of $f$ is the total flow leaving the source,
+defined by
+\[
+  \val(f) \coloneqq \sum_{(s,v)\in E} f(s,v).
+\]
+When the network has no edges entering $s$ and no edges leaving $t$, this is
+also equal to the total flow entering $t$; we prove this formally below.
+\end{definition}
+
+\subsection{Cuts and their capacities}
+
+\begin{definition}[$s$--$t$ cut]
+Let $N=(G,c,s,t)$ be a flow network. An \emph{$s$--$t$ cut} is an ordered pair
+$(S,T)$ of subsets of $V$ such that
+\[
+  S \cup T = V, \qquad S \cap T = \varnothing, \qquad s \in S, \qquad t \in T.
+\]
+We often implicitly write $T = V \setminus S$ and speak of the cut ``$S$''.
+\end{definition}
+
+Intuitively, an $s$--$t$ cut is a partition of the vertices separating $s$ from
+$t$. We measure how ``restrictive'' a cut is by the total capacity of the edges
+that cross it.
+
+\begin{definition}[Capacity of a cut]
+Let $(S,T)$ be an $s$--$t$ cut. The \emph{capacity} of $(S,T)$ is
+\[
+  c(S,T) \coloneqq \sum_{\substack{(u,v)\in E\\ u\in S,\, v\in T}} c(u,v).
+\]
+Only edges directed from $S$ to $T$ contribute.
+\end{definition}
+
+\begin{definition}[Minimum $s$--$t$ cut]
+The \emph{minimum $s$--$t$ cut value} is
+\[
+  \lambda^* \coloneqq \min\{ c(S,T) : (S,T) \text{ is an $s$--$t$ cut} \}.
+\]
+Any cut $(S,T)$ with $c(S,T)=\lambda^*$ is called a \emph{minimum cut}.
+\end{definition}
+
+\section{The Flow Value Lemma and Cut Upper Bound}
+
+We first show that the value of any flow is bounded above by the capacity of
+any $s$--$t$ cut. The key technical ingredient is the following lemma.
+
+\begin{lemma}[Flow value lemma]\label{lem:flow-value}
+Let $f$ be a flow in $N=(G,c,s,t)$. For any subset $X\subseteq V$ with
+$s\in X$ and $t\notin X$, we have
+\[
+  \val(f)
+  = \sum_{\substack{(u,v)\in E\\ u\in X,\, v\notin X}} f(u,v)
+    \;-\;
+    \sum_{\substack{(u,v)\in E\\ u\notin X,\, v\in X}} f(u,v).
+\]
+In words: the value of the flow equals the net flow crossing any ``$s$-side''
+vertex set $X$.
+\end{lemma}
+
+\begin{proof}
+Define the \emph{net outflow} of $f$ from $X$ by
+\[
+  F(X) \coloneqq
+  \sum_{\substack{(u,v)\in E\\ u\in X,\, v\notin X}} f(u,v)
+  - \sum_{\substack{(u,v)\in E\\ u\notin X,\, v\in X}} f(u,v).
+\]
+We claim $F(X)=\val(f)$ for any $X$ with $s\in X$ and $t\notin X$.
+
+Rewrite $F(X)$ by grouping by the head or tail vertex:
+\begin{align*}
+  F(X)
+  &= \sum_{u\in X} \sum_{\substack{(u,v)\in E\\ v\notin X}} f(u,v)
+     \;-\;
+     \sum_{v\in X} \sum_{\substack{(u,v)\in E\\ u\notin X}} f(u,v) \\
+  &= \sum_{v\in X} \biggl(
+      \sum_{\substack{(v,w)\in E\\ w\notin X}} f(v,w)
+      - \sum_{\substack{(u,v)\in E\\ u\notin X}} f(u,v)
+     \biggr),
+\end{align*}
+where in the second line we just renamed the dummy variables.
+
+Now split the sum over $v\in X$ into $v=s$ and $v\in X\setminus\{s\}$:
+\[
+  F(X)
+  = \biggl(
+      \sum_{\substack{(s,w)\in E\\ w\notin X}} f(s,w)
+      - \sum_{\substack{(u,s)\in E\\ u\notin X}} f(u,s)
+    \biggr)
+    + \sum_{v\in X\setminus\{s\}} \biggl(
+      \sum_{\substack{(v,w)\in E\\ w\notin X}} f(v,w)
+      - \sum_{\substack{(u,v)\in E\\ u\notin X}} f(u,v)
+    \biggr).
+\]
+
+By assumption, there are no edges entering $s$, so the sum over $(u,s)$ is
+zero, and the first term reduces to
+\[
+  \sum_{(s,w)\in E} f(s,w) = \val(f),
+\]
+since $w\notin X$ automatically (because $s\in X$ and $(s,w)$ can only leave
+$X$).
+
+Next consider any $v\in X\setminus\{s\}$. Split all edges into those with head
+$v$ or tail $v$ and those with both endpoints in $X$ or both in $V\setminus X$.
+A short check (or a picture) shows that
+\[
+  \sum_{\substack{(v,w)\in E\\ w\notin X}} f(v,w)
+  - \sum_{\substack{(u,v)\in E\\ u\notin X}} f(u,v)
+  =
+  \sum_{(v,w)\in E} f(v,w)
+  - \sum_{(u,v)\in E} f(u,v),
+\]
+because internal edges with both endpoints in $X$ cancel between the two
+sums, and edges with both endpoints outside $X$ do not appear at all.
+
+By flow conservation at each $v\in V\setminus\{s,t\}$, we have
+\[
+  \sum_{(v,w)\in E} f(v,w)
+  = \sum_{(u,v)\in E} f(u,v),
+\]
+so the expression for each $v\in X\setminus\{s\}$ is $0$. Therefore
+\[
+  F(X) = \val(f) + \sum_{v\in X\setminus\{s\}} 0 = \val(f),
+\]
+which is the desired equality.
+\end{proof}
+
+The upper bound on flow value by cut capacity is now immediate.
+
+\begin{proposition}[Cut upper bound]\label{prop:cut-upper-bound}
+Let $f$ be a flow and $(S,T)$ an $s$--$t$ cut. Then
+\[
+  \val(f) \le c(S,T).
+\]
+\end{proposition}
+
+\begin{proof}
+Apply Lemma~\ref{lem:flow-value} with $X=S$. We obtain
+\[
+  \val(f)
+  = \sum_{(u,v)\in S\times T} f(u,v)
+    - \sum_{(u,v)\in T\times S} f(u,v).
+\]
+The second sum is nonnegative, since $f(u,v)\ge 0$ for all edges. Therefore
+\[
+  \val(f)
+  \le \sum_{(u,v)\in S\times T} f(u,v)
+  \le \sum_{(u,v)\in S\times T} c(u,v)
+  = c(S,T),
+\]
+where the second inequality uses the capacity constraints $f(u,v)\le c(u,v)$.
+\end{proof}
+
+As an immediate corollary, the value of any flow is bounded above by the value
+of any cut, and thus also by the minimum cut value.
+
+\begin{corollary}\label{cor:flow-le-min-cut}
+For every flow $f$,
+\[
+  \val(f) \le \lambda^*.
+\]
+\end{corollary}
+
+\begin{proof}
+For any $s$--$t$ cut $(S,T)$, Proposition~\ref{prop:cut-upper-bound} gives
+$\val(f)\le c(S,T)$. Taking the minimum over all cuts yields
+\[
+  \val(f) \le \min\{c(S,T)\} = \lambda^*.
+\]
+\end{proof}
+
+The Max-Flow Min-Cut Theorem will assert that this upper bound is tight:
+there exists a flow whose value is \emph{equal} to $\lambda^*$.
+
+\section{Residual Networks and Augmenting Paths}
+
+To show that the upper bound is tight, we need a way to \emph{improve} a given
+flow if it is not optimal. This is achieved via residual networks and augmenting
+paths.
+
+\begin{definition}[Residual capacity]
+Let $f$ be a flow. For an edge $(u,v)\in E$, its \emph{residual capacity} with
+respect to $f$ is
+\[
+  c_f(u,v) \coloneqq c(u,v) - f(u,v).
+\]
+In addition, for every edge $(u,v)\in E$, we introduce a \emph{reverse edge}
+$(v,u)$ whose residual capacity is
+\[
+  c_f(v,u) \coloneqq f(u,v).
+\]
+If $(u,v)\notin E$ we set $c(u,v)=0$ and we may treat $c_f(u,v)$ as defined
+accordingly (possibly zero).
+\end{definition}
+
+The intuition is that $c_f(u,v)$ measures how much additional flow we can send
+forward on $(u,v)$, while $c_f(v,u)$ measures how much flow we can ``cancel''
+on $(u,v)$ by sending flow back along $(v,u)$.
+
+\begin{definition}[Residual network]
+Given a flow $f$, the \emph{residual network} $G_f=(V,E_f)$ is the directed
+graph with vertex set $V$ and edge set
+\[
+  E_f \coloneqq \{(u,v)\in V\times V : c_f(u,v) > 0\},
+\]
+where $c_f$ is the residual capacity function defined above.
+\end{definition}
+
+\begin{definition}[Augmenting path]
+An \emph{augmenting path} for $f$ is a directed path $P$ from $s$ to $t$ in the
+residual network $G_f$. The \emph{residual capacity} of $P$ is
+\[
+  \Delta_f(P) \coloneqq \min\{ c_f(u,v) : (u,v)\text{ is an edge of }P\}.
+\]
+\end{definition}
+
+\subsection{Augmenting along a path}
+
+We next formalize the process of increasing a flow along an augmenting path.
+
+\begin{lemma}[Augmenting a flow on a path]\label{lem:augment}
+Let $f$ be a flow and let $P$ be an $s$--$t$ augmenting path in $G_f$ with
+residual capacity $\Delta = \Delta_f(P) > 0$. Define $f':E\to \R_{\ge 0}$ by
+\[
+  f'(u,v) \coloneqq
+  \begin{cases}
+    f(u,v) + \Delta, & \text{if }(u,v)\text{ is a forward edge of }P,\\[0.25em]
+    f(u,v) - \Delta, & \text{if }(v,u)\text{ is a forward edge of }P,\\[0.25em]
+    f(u,v), & \text{otherwise}.
+  \end{cases}
+\]
+Then $f'$ is also a flow, and
+\[
+  \val(f') = \val(f) + \Delta.
+\]
+\end{lemma}
+
+\begin{proof}
+First we show that $f'$ satisfies the capacity constraints. Consider any edge
+$(u,v)\in E$.
+\begin{itemize}[itemsep=0.2em]
+  \item If $(u,v)$ is not used (in either direction) by $P$, then $f'(u,v)=f(u,v)$,
+        and the capacity constraints are inherited from $f$.
+  \item If $(u,v)$ is a forward edge on $P$, then $(u,v)\in E_f$ and
+        $c_f(u,v)=c(u,v)-f(u,v) \ge \Delta$. Hence
+        \[
+          f'(u,v) = f(u,v)+\Delta \le f(u,v) + c_f(u,v) = c(u,v).
+        \]
+        Moreover $f'(u,v)\ge 0$ since $f(u,v)\ge 0$ and $\Delta\ge 0$.
+  \item If $(v,u)$ is a forward edge on $P$, then by definition of $E_f$ we have
+        \[
+          c_f(v,u) = f(u,v) \ge \Delta.
+        \]
+        Thus $f(u,v) \ge \Delta$ and
+        \[
+          f'(u,v) = f(u,v) - \Delta \ge 0.
+        \]
+        Also $f'(u,v)\le f(u,v)\le c(u,v)$, so the upper capacity bound holds.
+\end{itemize}
+Thus $0\le f'(u,v)\le c(u,v)$ for all edges.
+
+Next we check flow conservation at each vertex $x\in V\setminus\{s,t\}$.
+Only edges in $P$ incident to $x$ can change their flow values; all other
+incident edges keep the same flow. On the path $P$, the vertex $x$ has either
+degree $0$ (if it is not on $P$), degree $2$ as an internal vertex, or degree
+$1$ as $s$ or $t$. For $x\notin\{s,t\}$ there are only two possibilities:
+\begin{itemize}[itemsep=0.2em]
+  \item If $x$ is not on $P$, then no incident flows change, so conservation
+        holds since it held for $f$.
+  \item If $x$ is an internal vertex of $P$, then exactly two incident edges
+        of $x$ appear in $P$: one entering and one leaving. Whether each is a
+        forward or backward use of the underlying edge in $G$, the change
+        in inflow at $x$ is exactly $\pm\Delta$ and the change in outflow is
+        the same $\pm\Delta$, so the net change is $0$. Thus conservation at
+        $x$ is preserved.
+\end{itemize}
+Therefore $f'$ satisfies flow conservation at every intermediate vertex.
+
+Finally, we examine the value. Consider the net flow out of $s$. Only edges in
+$P$ incident to $s$ change their flow, and exactly one such edge is used on $P$.
+If the first edge of $P$ is $(s,v)$, then it is used in the forward direction
+and we increase $f(s,v)$ by $\Delta$, increasing $\val(f)$ by $\Delta$. If the
+first edge is $(v,s)$ used in the forward direction, then we decrease $f(v,s)$
+by $\Delta$, which by conservation implies that net flow out of $s$ increases
+by $\Delta$ as well (intuitively, we are sending $\Delta$ less flow into $s$,
+which corresponds to $\Delta$ more units net leaving $s$). A more formal
+argument can be made using Lemma~\ref{lem:flow-value} applied to $X=\{s\}$,
+for which $F(X)$ counts exactly the net outflow from $s$.
+
+In either case, we conclude
+\[
+  \val(f') = \val(f) + \Delta,
+\]
+as claimed.
+\end{proof}
+
+\section{Characterization of Optimality}
+
+We now prove a fundamental characterization: a flow is maximal if and only if
+its residual network has no $s$--$t$ path. This is the core of the
+Max-Flow Min-Cut Theorem.
+
+\begin{lemma}[No augmenting path $\Rightarrow$ cut of same value]\label{lem:no-aug-cut}
+Let $f$ be a flow and suppose the residual network $G_f$ contains no directed
+path from $s$ to $t$. Let $S\subseteq V$ be the set of vertices reachable from
+$s$ in $G_f$, and let $T\coloneqq V\setminus S$. Then:
+\begin{enumerate}[label=(\alph*), itemsep=0.2em]
+  \item $(S,T)$ is an $s$--$t$ cut.
+  \item For every edge $(u,v)$ with $u\in S$ and $v\in T$, we have
+  $f(u,v)=c(u,v)$ (such edges are saturated).
+  \item For every edge $(u,v)$ with $u\in T$ and $v\in S$, we have
+  $f(u,v)=0$ (such edges carry no flow).
+  \item $\val(f) = c(S,T)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+\begin{enumerate}[label=(\alph*), itemsep=0.2em]
+  \item By definition, $S$ is the set of vertices reachable from $s$ in $G_f$.
+        Thus $s\in S$. Since there is no path from $s$ to $t$ in $G_f$, the
+        sink $t$ is not reachable, so $t\in T$, and $(S,T)$ is indeed an
+        $s$--$t$ cut.
+  \item Suppose $u\in S$, $v\in T$, and $(u,v)\in E$. If $c_f(u,v) > 0$ then
+        $(u,v)\in E_f$ and hence $v$ would be reachable from $s$ in $G_f$
+        (since $u$ is reachable and there is an edge from $u$ to $v$), which
+        would force $v\in S$, contradicting $v\in T$. Therefore
+        \[
+          c_f(u,v) = c(u,v)-f(u,v)=0 \quad\Rightarrow\quad f(u,v)=c(u,v).
+        \]
+  \item Suppose $u\in T$, $v\in S$, and $(u,v)\in E$. If $f(u,v) > 0$, then
+        the reverse edge $(v,u)$ in the residual network has
+        \[
+          c_f(v,u) = f(u,v) > 0,
+        \]
+        so $(v,u)\in E_f$ and hence $u$ would be reachable from $s$ in
+        $G_f$ (because $v\in S$), implying $u\in S$. This contradicts $u\in T$.
+        Therefore $f(u,v)=0$.
+  \item Applying Lemma~\ref{lem:flow-value} with $X=S$ we obtain
+        \[
+          \val(f)
+          = \sum_{\substack{(u,v)\in E\\ u\in S,\, v\in T}} f(u,v)
+            - \sum_{\substack{(u,v)\in E\\ u\in T,\, v\in S}} f(u,v).
+        \]
+        By (c), every edge from $T$ to $S$ carries zero flow, so the second
+        sum is $0$. By (b), every edge from $S$ to $T$ is saturated, so
+        $f(u,v)=c(u,v)$ for such edges. Therefore
+        \[
+          \val(f) = \sum_{(u,v)\in S\times T} c(u,v) = c(S,T).
+        \]
+\end{enumerate}
+\end{proof}
+
+\begin{lemma}[Characterization via augmenting paths]\label{lem:char-aug}
+Let $f$ be a flow in $N$. Then the following are equivalent:
+\begin{enumerate}[label=(\roman*), itemsep=0.2em]
+  \item $f$ is a maximum flow (i.e., $\val(f)$ is as large as possible).
+  \item There is no $s$--$t$ augmenting path in $G_f$.
+  \item There exists an $s$--$t$ cut $(S,T)$ such that
+  $\val(f) = c(S,T)$.
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+We show $(\mathrm{i})\Rightarrow(\mathrm{ii})\Rightarrow(\mathrm{iii})\Rightarrow(\mathrm{i})$.
+
+\medskip\noindent
+$(\mathrm{i})\Rightarrow(\mathrm{ii})$: Suppose $f$ is a maximum flow but
+$G_f$ contains an $s$--$t$ augmenting path $P$. By Lemma~\ref{lem:augment},
+we can construct a flow $f'$ with $\val(f') = \val(f)+\Delta$ for some
+$\Delta>0$, contradicting maximality of $f$. Hence no augmenting path exists.
+
+\medskip\noindent
+$(\mathrm{ii})\Rightarrow(\mathrm{iii})$: Suppose there is no augmenting path.
+By Lemma~\ref{lem:no-aug-cut}, the sets $S$ and $T$ defined as the vertices
+reachable and unreachable (respectively) from $s$ in $G_f$ form an $s$--$t$
+cut with $\val(f)=c(S,T)$.
+
+\medskip\noindent
+$(\mathrm{iii})\Rightarrow(\mathrm{i})$: Suppose there exists an $s$--$t$ cut
+$(S,T)$ with $\val(f)=c(S,T)$. For any flow $g$, by
+Proposition~\ref{prop:cut-upper-bound} we have
+\[
+  \val(g) \le c(S,T) = \val(f),
+\]
+so $\val(f)$ is an upper bound on the value of any flow. Thus $f$ is a maximum
+flow.
+\end{proof}
+
+\section{The Max-Flow Min-Cut Theorem}
+
+We are now ready to state and prove the main result.
+
+\begin{theorem}[Max-Flow Min-Cut Theorem]\label{thm:mfmc}
+In any flow network $N=(G,c,s,t)$, the maximum value of an $s$--$t$ flow equals
+the minimum capacity of an $s$--$t$ cut. More precisely,
+\[
+  \max\{ \val(f) : f \text{ is a flow in }N\}
+  =
+  \min\{ c(S,T) : (S,T) \text{ is an $s$--$t$ cut} \}.
+\]
+\end{theorem}
+
+\begin{proof}
+Let $f^*$ be any maximum flow (which exists since the set of feasible flows is
+nonempty and bounded, and the value is a continuous function on a compact
+polytope). By Corollary~\ref{cor:flow-le-min-cut} we have
+\[
+  \val(f^*) \le \lambda^*,
+\]
+where $\lambda^*$ is the minimum cut capacity.
+
+By Lemma~\ref{lem:char-aug}, there exists an $s$--$t$ cut $(S^*,T^*)$ such that
+\[
+  \val(f^*) = c(S^*,T^*).
+\]
+Since $c(S^*,T^*) \ge \lambda^*$ by definition of $\lambda^*$, we deduce
+\[
+  \val(f^*) = c(S^*,T^*) \ge \lambda^*.
+\]
+Combining the two inequalities yields
+\[
+  \val(f^*) = \lambda^*,
+\]
+which is exactly the claimed equality.
+\end{proof}
+
+The standard picture is now complete: any maximum flow and any minimum cut
+have the same value; furthermore, the structure of the residual network at
+optimality witnesses a particular minimum cut.
+
+\section{Algorithmic Corollaries}
+
+The proof of the Max-Flow Min-Cut Theorem via augmenting paths directly
+motivates the \emph{Ford--Fulkerson method}, an algorithmic procedure for
+finding a maximum flow.
+
+\begin{definition}[Ford--Fulkerson method (informal)]
+Starting from the zero flow $f\equiv 0$, repeatedly find an $s$--$t$ augmenting
+path $P$ in the residual network $G_f$, augment the flow by a positive amount
+$\Delta$ along $P$ as in Lemma~\ref{lem:augment}, and update $f$ and $G_f$.
+The method terminates when no augmenting path exists.
+\end{definition}
+
+By Lemma~\ref{lem:char-aug}, any flow at which no augmenting path exists is
+maximum. This yields:
+
+\begin{corollary}[Correctness of Ford--Fulkerson]\label{cor:ff-correct}
+If the Ford--Fulkerson method terminates at a flow $f$, then $f$ is a maximum
+flow, and its value equals the capacity of some minimum $s$--$t$ cut.
+\end{corollary}
+
+\begin{proof}
+Upon termination there is no $s$--$t$ path in the residual network $G_f$.
+By Lemma~\ref{lem:char-aug}, $f$ is a maximum flow and there exists a cut
+$(S,T)$ with $\val(f)=c(S,T)=\lambda^*$.
+\end{proof}
+
+\subsection{Integrality of maximum flows}
+
+A particularly important consequence is integrality: if capacities are
+integers, then there is an optimal flow which is also integral.
+
+\begin{theorem}[Integrality theorem]\label{thm:integrality}
+Let $N=(G,c,s,t)$ be a flow network where all capacities $c(e)$ are integers.
+Assume that the Ford--Fulkerson method always chooses an $s$--$t$ augmenting
+path $P$ and augments by $\Delta = \Delta_f(P)$ as in
+Lemma~\ref{lem:augment}. Then:
+\begin{enumerate}[label=(\alph*), itemsep=0.2em]
+  \item All flows encountered during the algorithm assign integer values to
+  every edge.
+  \item The algorithm terminates after finitely many augmentations.
+  \item The final flow is a maximum flow with integer values on each edge.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+\begin{enumerate}[label=(\alph*), itemsep=0.2em]
+  \item We prove by induction on the number of augmentations. Initially, the
+        zero flow is integral. Suppose the current flow $f$ is integral. Then
+        every residual capacity $c_f(u,v)$ is an integer, being the difference
+        of integers. In particular, the residual capacity $\Delta$ of any
+        augmenting path $P$ is the minimum of finitely many integers and hence
+        an integer. By Lemma~\ref{lem:augment}, each updated value $f'(u,v)$
+        differs from $f(u,v)$ by either $0$ or $\pm \Delta$, so $f'(u,v)$ is
+        still an integer. Thus integrality is preserved.
+  \item At each augmentation, the value of the flow $\val(f)$ increases by
+        $\Delta\ge 1$, an integer. On the other hand, by
+        Corollary~\ref{cor:flow-le-min-cut}, $\val(f)\le \lambda^*$ for every
+        flow $f$. Because capacities are integers, $\lambda^*$ is also an
+        integer. Hence the value can increase at most $\lambda^*$ times before
+        reaching its upper bound. Therefore, there can be at most $\lambda^*$
+        augmentations, and the algorithm terminates after finitely many steps.
+  \item By Corollary~\ref{cor:ff-correct}, the terminating flow is maximum.
+        By part (a), it is integral.
+\end{enumerate}
+\end{proof}
+
+\section{Further Consequences and Remarks}
+
+We briefly mention a classical combinatorial corollary, obtained by taking unit
+capacities; we state it without proof, as its derivation is now standard.
+
+\begin{corollary}[Edge-disjoint paths vs.~edge cuts]
+Let $G=(V,E)$ be a directed graph with distinct vertices $s,t\in V$. Then the
+maximum number of pairwise edge-disjoint directed $s$--$t$ paths equals the
+minimum size of a set of edges whose removal disconnects $t$ from $s$.
+\end{corollary}
+
+\begin{remark}
+This is a special case of a more general set of min-max theorems in
+combinatorial optimization, such as Menger's theorem for vertex-disjoint paths
+and vertex cuts, and the max-flow min-cut theorem is one of the foundational
+examples of such dualities.
+\end{remark}
+
+\end{document}
