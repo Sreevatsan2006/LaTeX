@@ -74,8 +74,13 @@
 \DeclareOption{charter}{\def\Assignment@font{charter}}
 \DeclareOption{palatino}{\def\Assignment@font{palatino}}
 
-\ProcessOptions\relax
+\newif\ifAssignment@aFour
+\newif\ifAssignment@aFourNative
+\DeclareOption{a4}{\Assignment@aFourtrue}
+\DeclareOption{a4native}{\Assignment@aFourNativetrue}
 
+
+\ProcessOptions\relax
 % ------------------------------
 % Dependency Policy
 % ------------------------------
@@ -106,8 +111,6 @@
 \RequirePackage{bbm}
 \RequirePackage{etoolbox}
 \RequirePackage{mdframed}
-\RequirePackage{hyperref}
-\RequirePackage[nameinlink,noabbrev]{cleveref}
 \RequirePackage{xparse}
 \RequirePackage{needspace}
 \RequirePackage[shortlabels]{enumitem}
@@ -118,15 +121,20 @@
 \RequirePackage{listings}
 \RequirePackage{mathrsfs}
 
-
-
-
-
-
-
-
-
-
+\RequirePackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=nyt,
+  maxbibnames=99,
+  maxcitenames=3,
+  giveninits=true,
+  doi=false,
+  isbn=false,
+  url=false,
+  natbib=true
+]{biblatex}
+\RequirePackage{hyperref}
+\RequirePackage[nameinlink,noabbrev]{cleveref}
 
 
 
@@ -170,6 +178,16 @@
     \RequirePackage{mathpazo}%
   }%
 }
+
+
+\ifAssignment@aFourNative
+  \geometry{paper=a4paper, margin=1in}
+\else\ifAssignment@aFour
+  \geometry{paper=a4paper, textwidth=6.5in, textheight=9in, marginratio=1:1}
+\else
+  \geometry{paper=letterpaper, margin=1in}
+\fi\fi
+
 
 % ------------------------------
 % Layout Defaults (Optional Subsystem)
@@ -449,6 +467,7 @@
 % - `fact` resets by section.
 % - related statement environments share `fact` numbering.
 \Assignment@MaybeNewTheoremBySection{fact}{SupportHeader}{Fact}
+\Assignment@MaybeNewTheoremShared{claim}{SupportHeader}{fact}{Claim}
 \Assignment@MaybeNewTheoremShared{property}{SupportHeader}{fact}{Property}
 \Assignment@MaybeNewTheoremShared{conjecture}{SupportHeader}{fact}{Conjecture}
 \Assignment@MaybeNewTheoremShared{question}{SupportHeader}{fact}{Question}
@@ -459,6 +478,66 @@
 \Assignment@MaybeNewTheoremBySection{definition}{DefinitionHeader}{Definition}
 \Assignment@MaybeNewTheoremBySection{example}{definition}{Example}
 \Assignment@MaybeNewTheoremBySection{remark}{remark}{Remark}
+
+
+
+% ============================================================================
+% Unnumbered Versions (Starred)
+% ============================================================================
+
+% Core Theorems
+\newtheorem*{theorem*}{Theorem}
+\newtheorem*{lemma*}{Lemma}
+\newtheorem*{proposition*}{Proposition}
+\newtheorem*{corollary*}{Corollary}
+
+% Support Statement family
+\newtheorem*{fact*}{Fact}
+\newtheorem*{claim*}{Claim}
+\newtheorem*{property*}{Property}
+\newtheorem*{conjecture*}{Conjecture}
+\newtheorem*{question*}{Question}
+\newtheorem*{statement*}{Statement}
+\newtheorem*{obs*}{Observation}
+
+% Definitions/examples/remarks
+\newtheorem*{definition*}{Definition}
+\newtheorem*{example*}{Example}
+\newtheorem*{remark*}{Remark}
+
+
+% Precise cleveref names, including alias-counter theorem environments.
+% This keeps shared numbering while preserving labels such as Lemma, Claim, etc.
+\crefname{theorem}{theorem}{theorems}
+\Crefname{theorem}{Theorem}{Theorems}
+\crefname{lemma}{lemma}{lemmas}
+\Crefname{lemma}{Lemma}{Lemmas}
+\crefname{proposition}{proposition}{propositions}
+\Crefname{proposition}{Proposition}{Propositions}
+\crefname{corollary}{corollary}{corollaries}
+\Crefname{corollary}{Corollary}{Corollaries}
+\crefname{fact}{fact}{facts}
+\Crefname{fact}{Fact}{Facts}
+\crefname{claim}{claim}{claims}
+\Crefname{claim}{Claim}{Claims}
+\crefname{property}{property}{properties}
+\Crefname{property}{Property}{Properties}
+\crefname{conjecture}{conjecture}{conjectures}
+\Crefname{conjecture}{Conjecture}{Conjectures}
+\crefname{question}{question}{questions}
+\Crefname{question}{Question}{Questions}
+\crefname{statement}{statement}{statements}
+\Crefname{statement}{Statement}{Statements}
+\crefname{obs}{observation}{observations}
+\Crefname{obs}{Observation}{Observations}
+\crefname{definition}{definition}{definitions}
+\Crefname{definition}{Definition}{Definitions}
+\crefname{example}{example}{examples}
+\Crefname{example}{Example}{Examples}
+\crefname{remark}{remark}{remarks}
+\Crefname{remark}{Remark}{Remarks}
+
+
 
 % Problem/Solution pair (worksheet-style):
 % - Heading format follows the requested online snippet.
@@ -708,7 +787,6 @@
 \providecommand{\Assignment@BoxTitle}[1]{%
   \ifstrempty{#1}{}{{\textbf{\textcolor{Ink}{#1}}\par\smallskip}}%
 }
-
 % Generic color callout:
 %   \begin{ColorNoteBox}{<ColorName>}[Optional Title] ... \end{ColorNoteBox}
 % This is useful when a semantic box is not specific enough.
@@ -726,30 +804,32 @@
     skipabove=0.35em,
     skipbelow=0.35em,
     nobreak=true
-  ]\Assignment@BoxTitle{#2}#3\end{mdframed}%
+  ]%
+  \Assignment@BoxTitle{#2}#3%
+  \end{mdframed}%
 }{}
 
-% Simple all-purpose colored box:
-% Usage:
-%   \begin{cbox}[Blue][Optional Title] ... \end{cbox}
-% First optional argument = border/fill base color.
-% Second optional argument = title line (leave empty for no title).
-\NewDocumentEnvironment{cbox}{O{Blue} O{} +b}{%
-  \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
-}{}
+% ---- Make everything an alias of ColorNoteBox ----
 
-% Readable alias (PascalCase). We avoid lowercase `box`/`colorbox` because
-% those names collide with core TeX/xcolor commands.
 \ifcsdef{ColorBox}{%
   \RenewDocumentEnvironment{ColorBox}{O{Blue} O{} +b}{%
-    \begin{cbox}[#1][#2]#3\end{cbox}%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
   }{}%
 }{%
   \NewDocumentEnvironment{ColorBox}{O{Blue} O{} +b}{%
-    \begin{cbox}[#1][#2]#3\end{cbox}%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
   }{}%
 }
 
+\ifcsdef{Box}{%
+  \RenewDocumentEnvironment{Box}{O{Blue} O{} +b}{%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
+  }{}%
+}{%
+  \NewDocumentEnvironment{Box}{O{Blue} O{} +b}{%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
+  }{}%
+}
 
 
 

@@ -68,14 +68,37 @@
 %
 % This lets old files keep their custom theorem setup while new files get defaults automatically.
 %
-% ==============================================================================
+% --------------------------------------------------------------------------------
+% 5) FONT STYLE AND PAGE SIZING
+% --------------------------------------------------------------------------------
+% The package defaults to Palatino for a clean, modern aesthetic. 
+% You can change the overarching typography by passing a font option:
+%
+%   \usepackage[palatino]{Math} % Default. Palatino text + Pazo math.
+%   \usepackage[classic]{Math}  % Vanilla LaTeX Computer Modern.
+%   \usepackage[charter]{Math}  % Heavier serif, highly readable on screens.
+%
+% --- PAPER SIZE / LAYOUT MODES ---
+% The package defaults to US Letter with 1-inch margins. 
+% You can change the paper sizing behavior by passing an option:
+%
+%   \usepackage{Math}           % Default. US Letter paper, standard margins.
+%   \usepackage[a4]{Math}       % A4 paper, but locks the text block to match US Letter.
+%                               % (Ensures pagination and line wraps stay identical as letter).
+%   \usepackage[a4native]{Math} % A4 paper with true 1-inch margins.
+%                               % (Text reflows natively to the narrower/taller A4 page).
+
+
+
 % General-purpose template for mathematical writing.
 
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{Math}
 
 
-% Package options
+% ------------------------------------------------------------------------------
+% PACKAGE OPTIONS
+% ------------------------------------------------------------------------------
 
 % `notikz`:
 %   Do not load TikZ. Useful for faster compiles if you are not drawing figures.
@@ -83,11 +106,11 @@
 \Math@tikztrue
 \DeclareOption{notikz}{\Math@tikzfalse}
 
-% Starred section behavior:
-% - By default, starred sections/subsections keep standard LaTeX behavior.
-% - `structuredsections` preserves the older Math.sty behavior where starred
-%   section commands advance counters and are inserted into the table of contents.
-% - `standardsections` remains accepted as a compatibility no-op.
+% NOTE: DEPRECATED
+% `structuredsections` / `standardsections`:
+%   By default, starred sections (\section*) keep vanilla LaTeX behavior (no counter
+%   increment, no ToC entry). `structuredsections` overrides this to increment counters
+%   and add ToC entries while keeping the headings visibly unnumbered.
 \newif\ifMath@structuredsections
 \Math@structuredsectionsfalse
 \DeclareOption{structuredsections}{\Math@structuredsectionstrue}
@@ -112,9 +135,21 @@
 \DeclareOption{balanced}{\def\Math@colormode{balanced}}
 \DeclareOption{rich}{\def\Math@colormode{rich}}
 
+% --- PAPER SIZE / LAYOUT MODES ---
+% The package defaults to US Letter with 1-inch margins. 
+% You can change the paper sizing behavior by passing an option:
+%   \usepackage{Math}           % Default. US Letter paper, standard margins.
+%   \usepackage[a4]{Math}       % A4 paper, but locks the text block to match US Letter.
+%                               % (Ensures pagination and line wraps stay identical globally).
+%   \usepackage[a4native]{Math} % A4 paper with true 1-inch margins.
+%                               % (Text reflows natively to the narrower/taller A4 page).
+\newif\ifMath@aFour
+\newif\ifMath@aFourNative
+\DeclareOption{a4}{\Math@aFourtrue}
+\DeclareOption{a4native}{\Math@aFourNativetrue}
+
 
 \ProcessOptions\relax
-
 % Core packages
 % This block is intentionally broad so Math.sty can be used as a one-shot
 % default import for common mathematical writing workflows.
@@ -126,8 +161,10 @@
 \RequirePackage{amsmath,amssymb,amsthm}
 \RequirePackage{mathtools}
 \RequirePackage{xcolor}
+\RequirePackage{iftex}
+\RequirePackage[svgnames]{xcolor}
 \RequirePackage[expansion=false]{microtype}
-\RequirePackage[a4paper,margin=1in]{geometry}
+\RequirePackage{geometry}
 \RequirePackage{graphicx}
 \RequirePackage{array}
 \RequirePackage{booktabs}
@@ -140,52 +177,101 @@
 \RequirePackage{etoolbox}
 \RequirePackage{aliascnt}
 \RequirePackage{mdframed}
-\RequirePackage{hyperref}
-\RequirePackage[nameinlink,noabbrev]{cleveref}
 \RequirePackage{xparse}
 \RequirePackage{needspace}
 \RequirePackage[shortlabels]{enumitem}
 \RequirePackage{fancyhdr}
+\RequirePackage{algorithm}
+\RequirePackage{algpseudocode}
+\RequirePackage{pgfplots}
+\RequirePackage{listings}
+\RequirePackage{mathrsfs}
+% --- BIBLIOGRAPHY & CROSS-REFERENCING ---
+% The defaults here are highly opinionated for standard math/CS papers:
+% - Alphabetic citations (e.g., [Smi24]) instead of numeric.
+% - Uncluttered bibliography (DOI, ISBN, and URLs are hidden by default).
+% - Name-in-link references (e.g., the entire phrase "Theorem 1" is clickable).
+% Modify the biblatex arguments below (e.g., change `style=alphabetic` to `numeric`) 
+% to match your specific citation needs.
+\RequirePackage{fancyhdr}
+\RequirePackage[
+  backend=biber,
+  style=alphabetic,
+  sorting=nyt,
+  maxbibnames=99,
+  maxcitenames=3,
+  giveninits=true,
+  doi=false,
+  isbn=false,
+  url=false,
+  natbib=true
+]{biblatex}
+\RequirePackage{hyperref}
+\RequirePackage[nameinlink,noabbrev]{cleveref}
 
-% Font selection
-\RequirePackage[T1]{fontenc}
-\RequirePackage[utf8]{inputenc}
-\ifdefstring{\Math@font}{classic}{}{%
-  \ifdefstring{\Math@font}{charter}{%
-    \RequirePackage{charter}%
-  }{%
-    \RequirePackage{mathpazo}%
-  }%
-}
+% ------------------------------------------------------------------------------
+% GLOBAL TYPOGRAPHY & LAYOUT
+% ------------------------------------------------------------------------------
+% These are the core spacing defaults. You may adjust these to fit your document's
+% needs, but be mindful of the warnings below.
 
-% Global text flow defaults:
-
-% Line spacing slightly increased increase for better readability
+% Line spacing. Palatino (the default font) benefits from a slight increase in 
+% leading due to its larger x-height.
+% Warning: Values > 1.05 may cause multi-line math environments to look disjointed.
 \linespread{1.03}
-% Paragraphs without indentation
+
+% Paragraph formatting. The default here is block-style (no indent, vertical gap).
+% Warning: If you change this to traditional indented paragraphs (e.g., \parindent=1.5em),
+% you MUST set \parskip to 0pt. Otherwise, your document will be double-spaced.
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.35em}
-% Emergency stretch to reduce overfull lines.
+
+% Emergency stretch gives the typesetting engine a 2em buffer to spread out words 
+% rather than letting text bleed into the right margin (overfull \hbox).
+% Warning: Increasing this > 3em can result in ugly, widely-gapped text lines.
 \setlength{\emergencystretch}{2em}
 
 
-% TikZ integration:
-% 1) By default, TikZ is ON in this template, so diagrams work immediately.
-% 2) If a document does not need figures, the user can load:
-%    \usepackage[notikz]{Math}
-%    which flips \ifMath@tikz to false and skips this block.
-% 3) Skipping TikZ can noticeably speed up compile time in text-heavy notes.
-% 4) The `positioning` library is loaded so node placement like
-%      right=of A, below=of B
-%    works out of the box without extra user configuration.
-\ifMath@tikz
-  \RequirePackage{tikz}
-  \usetikzlibrary{positioning}
-\fi
 
-% Color palette
+% List spacing defaults.
+% Goal: readable lists that do not waste vertical space.
+% - leftmargin=*  : align list body naturally with surrounding text width.
+% - itemsep       : spacing between consecutive items.
+% - topsep        : spacing above and below the list block.
+% You can override these in your .tex file with your own \setlist calls.
+\setlist[itemize]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
+\setlist[enumerate]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
 
-% Common colors
+% Running header/footer defaults.
+% - Left header: current section title (\leftmark), preserving mixed case.
+% - Right header: current page number.
+% - Rule: thin separator under the header.
+% - \sectionmark: updates \leftmark whenever a section starts.
+% If you prefer plain pages, set \pagestyle{plain} in your main .tex.
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{13.6pt}
+\fancyhead[L]{\nouppercase{\leftmark}}
+\fancyhead[R]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+
+% ------------------------------------------------------------------------------
+% COLOR PALETTE
+% ------------------------------------------------------------------------------
+% Every theorem frame, inline highlight, and callout box pulls from this list.
+%
+% How to use these colors in your own document:
+%   \textcolor{Cobalt}{This text will be blue.}
+%   \colorbox{WarningBg}{This text will have a soft yellow background.}
+%
+% Modify: change hex codes only. 
+% Color names are referenced in default macros, so renaming them will break those dependencies. 
+% To add custom colors: addn\definecolor{MyColor}{HTML}{123456}
+
+
+
 \definecolor{Blue}{HTML}{1D3557}
 \definecolor{LightBlue}{HTML}{A8DADC}
 \definecolor{Teal}{HTML}{2A9D8F}
@@ -223,6 +309,73 @@
 \definecolor{WarningBg}{HTML}{FFF7E6}
 \definecolor{DangerBg}{HTML}{FEF2F2}
 \definecolor{HighlightBg}{HTML}{FFFDEB}
+
+
+% --- SEMANTIC COLOR MAPPING ---
+% Customize the look by changing color assignments from the above palette.
+% Example: to make theorems green, change TheoremColor from {Blue} to {Green}.
+\colorlet{TheoremColor}{Blue}
+\colorlet{StatementColor}{Violet}
+\colorlet{DefinitionColor}{Orange}
+\colorlet{AlgoboxColor}{Violet}
+\colorlet{KeyWordColor}{Cobalt}
+\colorlet{WarningColor}{Red}
+\colorlet{ResultTextColor}{Gold}
+\colorlet{ResultBgColor}{HighlightBg}
+% Link colors
+\colorlet{InternalLinkColor}{blue}
+\colorlet{ExternalUrlColor}{Burgundy}
+\colorlet{CitationColor}{Forest}
+
+
+
+
+
+
+
+
+
+% Font selection
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\ifdefstring{\Math@font}{classic}{}{%
+  \ifdefstring{\Math@font}{charter}{%
+    \RequirePackage{charter}%
+  }{%
+    \RequirePackage{mathpazo}%
+  }%
+}
+
+
+\ifMath@aFourNative
+  \geometry{paper=a4paper, margin=1in}
+  % 6.5in x 9in is the text block size of US Letter with 1-inch margins (8.5 - 2, 11 - 21)
+  % Centering this on A4 (marginratio=1:1) guarantees identical pagination and 
+  % line breaks globally, whether viewed/printed on US Letter or A4.
+\else\ifMath@aFour
+  \geometry{paper=a4paper, textwidth=6.5in, textheight=9in, marginratio=1:1}
+\else
+  \geometry{paper=letterpaper, margin=1in}
+\fi\fi
+
+
+
+
+% TikZ integration:
+% 1) By default, TikZ is ON in this template, so diagrams work immediately.
+% 2) If a document does not need figures, the user can load:
+%    \usepackage[notikz]{Math}
+%    which flips \ifMath@tikz to false and skips this block.
+% 3) Skipping TikZ can noticeably speed up compile time in text-heavy notes.
+% 4) The `positioning` library is loaded so node placement like
+%      right=of A, below=of B
+%    works out of the box without extra user configuration.
+\ifMath@tikz
+  \RequirePackage{tikz}
+  \usetikzlibrary{positioning}
+\fi
+
+
 
 
 
@@ -266,30 +419,28 @@
 \def\Math@GenericBoxTint{9}
 \def\Math@MainLineWidth{0.9pt}
 \def\Math@CalloutLineWidth{0.9pt}
-% Heading + inline emphasis colors. These are reassigned per mode.
-\def\Math@TheoremHeadColor{Blue}
-\def\Math@StatementHeadColor{Violet}
-\def\Math@DefinitionHeadColor{Orange}
-\def\Math@AlgoTitleColor{Violet}
-\def\Math@KeyColor{Cobalt}
-\def\Math@WarnColor{Red}
-\def\Math@ResultColor{Gold}
-\def\Math@ResultBgColor{HighlightBg}
 
+% Heading + inline emphasis colors. These dynamically pull from user settings.
+\def\Math@TheoremHeadColor{TheoremColor}
+\def\Math@StatementHeadColor{StatementColor}
+\def\Math@DefinitionHeadColor{DefinitionColor}
+\def\Math@AlgoboxColor{AlgoboxColor}
+\def\Math@KeyColor{KeyWordColor}
+\def\Math@WarnColor{WarningColor}
+\def\Math@ResultColor{ResultTextColor}
+\def\Math@ResultBgColor{ResultBgColor}
 
 
 \providecommand{\Math@ApplyColorModeSettings}{%
   % Base palette for non-none modes.
-  \def\Math@TheoremHeadColor{Blue}%
-  \def\Math@StatementHeadColor{Violet}%
-  \def\Math@DefinitionHeadColor{Orange}%
-  \def\Math@AlgoTitleColor{Violet}%
-  \def\Math@KeyColor{Cobalt}%
-  \def\Math@WarnColor{Red}%
-  \def\Math@ResultColor{Gold}%
-  \def\Math@ResultBgColor{HighlightBg}%
-
-
+  \def\Math@TheoremHeadColor{TheoremColor}%
+  \def\Math@StatementHeadColor{StatementColor}%
+  \def\Math@DefinitionHeadColor{DefinitionColor}%
+  \def\Math@AlgoboxColor{AlgoboxColor}%
+  \def\Math@KeyColor{KeyWordColor}%
+  \def\Math@WarnColor{WarningColor}%
+  \def\Math@ResultColor{ResultTextColor}%
+  \def\Math@ResultBgColor{ResultBgColor}%
 
   \ifdefstring{\Math@colormode}{none}{%
     % "none" = remove colors but keep spacing/layout stable.
@@ -300,7 +451,7 @@
     \def\Math@TheoremHeadColor{Ink}%
     \def\Math@StatementHeadColor{Ink}%
     \def\Math@DefinitionHeadColor{Ink}%
-    \def\Math@AlgoTitleColor{Ink}%
+    \def\Math@AlgoboxColor{Ink}%
     \def\Math@KeyColor{Ink}%
     \def\Math@WarnColor{Ink}%
     \def\Math@ResultColor{Ink}%
@@ -338,15 +489,13 @@
   % Defaults use dark print-friendly colors so refs/cites/URLs stay distinct.
   % Users can override these after loading Math.sty with their own \hypersetup.
   \hypersetup{%
-    linkcolor=blue,
-    urlcolor=Burgundy,
-    citecolor=Forest,
-    filecolor=Burgundy,
-    anchorcolor=blue
+    linkcolor=InternalLinkColor,
+    urlcolor=ExternalUrlColor,
+    citecolor=CitationColor,
+    filecolor=ExternalUrlColor,
+    anchorcolor=InternalLinkColor
   }%
 }
-
-
 
 
 % Package startup styling.
@@ -360,28 +509,8 @@
 \hypersetup{colorlinks=true}
 \Math@ApplyLinkColors
 
-% List spacing defaults.
-% Goal: readable lists that do not waste vertical space.
-% - leftmargin=*  : align list body naturally with surrounding text width.
-% - itemsep       : spacing between consecutive items.
-% - topsep        : spacing above and below the list block.
-% You can override these in your .tex file with your own \setlist calls.
-\setlist[itemize]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
-\setlist[enumerate]{leftmargin=*, itemsep=0.15em, topsep=0.35em}
 
-% Running header/footer defaults.
-% - Left header: current section title (\leftmark), preserving mixed case.
-% - Right header: current page number.
-% - Rule: thin separator under the header.
-% - \sectionmark: updates \leftmark whenever a section starts.
-% If you prefer plain pages, set \pagestyle{plain} in your main .tex.
-\pagestyle{fancy}
-\fancyhf{}
-\setlength{\headheight}{13.6pt}
-\fancyhead[L]{\nouppercase{\leftmark}}
-\fancyhead[R]{\thepage}
-\renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
 
 % Theorem heading styles.
 % These style names are intentionally descriptive (PascalCase) so users can
@@ -455,6 +584,33 @@
 \Math@MaybeNewTheoremBySection{definition}{DefinitionHeader}{Definition}
 \Math@MaybeNewTheoremBySection{example}{definition}{Example}
 \Math@MaybeNewTheoremBySection{remark}{remark}{Remark}
+
+
+% ============================================================================
+% Unnumbered Versions (Starred)
+% ============================================================================
+
+% Core Theorems
+\newtheorem*{theorem*}{Theorem}
+\newtheorem*{lemma*}{Lemma}
+\newtheorem*{proposition*}{Proposition}
+\newtheorem*{corollary*}{Corollary}
+
+% Support Statement family
+\newtheorem*{fact*}{Fact}
+\newtheorem*{claim*}{Claim}
+\newtheorem*{property*}{Property}
+\newtheorem*{conjecture*}{Conjecture}
+\newtheorem*{question*}{Question}
+\newtheorem*{statement*}{Statement}
+\newtheorem*{obs*}{Observation}
+
+% Definitions/examples/remarks
+\newtheorem*{definition*}{Definition}
+\newtheorem*{example*}{Example}
+\newtheorem*{remark*}{Remark}
+
+
 
 % Precise cleveref names for theorem-like environments.
 % These defaults are deliberately explicit because alias counters preserve
@@ -563,7 +719,7 @@
   }{%
     % Core theorem-family wrappers.
     \mdfdefinestyle{theorembox}{%
-      linecolor=Blue,
+      linecolor=TheoremColor,
       linewidth=\Math@MainLineWidth,
       backgroundcolor=InfoBg!\Math@CalloutBgMix,
       roundcorner=6pt,
@@ -576,7 +732,7 @@
       nobreak=true
     }%
     \mdfdefinestyle{definitionbox}{%
-      linecolor=Orange,
+      linecolor=DefinitionColor,
       linewidth=\Math@MainLineWidth,
       backgroundcolor=WarningBg!\Math@CalloutBgMix,
       roundcorner=6pt,
@@ -589,7 +745,7 @@
       nobreak=true
     }%
     \mdfdefinestyle{supportboxstyle}{%
-      linecolor=Violet,
+      linecolor=StatementColor,
       linewidth=\Math@MainLineWidth,
       backgroundcolor=HighlightBg!\Math@CalloutBgMix,
       roundcorner=6pt,
@@ -723,7 +879,7 @@
     }%
     % Dedicated wrapper for pseudocode/algo environments.
     \mdfdefinestyle{algoboxstyle}{%
-      linecolor=Violet,
+      linecolor=AlgoboxColor,
       linewidth=\Math@MainLineWidth,
       backgroundcolor=HighlightBg!\Math@CalloutBgMix,
       roundcorner=6pt,
@@ -841,22 +997,11 @@
 
 % Simple all-purpose colored box:
 % Usage:
-%   \begin{generalbox}[Blue][Optional Title] ... \end{generalbox}
+%   \begin{ColorBox}[Blue][Optional Title] ... \end{ColorBox}
 % First optional argument = border/fill base color.
 % Second optional argument = title line (leave empty for no title).
-\NewDocumentEnvironment{generalbox}{O{Blue} O{} +b}{%
-  \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
-}{}
 
-% Neutral manual box:
-%   \begin{plainbox}[Optional Title] ... \end{plainbox}
-% Unlike the color-named boxes, this stays visibly framed in \MathColorMode{none}.
-\NewDocumentEnvironment{plainbox}{O{} +b}{%
-  \begin{mdframed}[style=plainboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
-}{}
 
-% Readable alias (PascalCase). We avoid lowercase `box`/`colorbox` because
-% those names collide with core TeX/xcolor commands.
 \ifcsdef{ColorBox}{%
   \RenewDocumentEnvironment{ColorBox}{O{Blue} O{} +b}{%
     \begin{generalbox}[#1][#2]#3\end{generalbox}%
@@ -867,21 +1012,25 @@
   }{}%
 }
 
-% Exact all-caps alias for users who prefer uppercase environment names.
-\ifcsdef{COLORBOX}{%
-  \RenewDocumentEnvironment{COLORBOX}{O{Blue} O{} +b}{%
-    \begin{ColorBox}[#1][#2]#3\end{ColorBox}%
+% Short semantic alias.
+\ifcsdef{Box}{%
+  \RenewDocumentEnvironment{Box}{O{Blue} O{} +b}{%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
   }{}%
 }{%
-  \NewDocumentEnvironment{COLORBOX}{O{Blue} O{} +b}{%
-    \begin{ColorBox}[#1][#2]#3\end{ColorBox}%
+  \NewDocumentEnvironment{Box}{O{Blue} O{} +b}{%
+    \begin{ColorNoteBox}{#1}[#2]#3\end{ColorNoteBox}%
   }{}%
 }
 
-% Short alias for fast note-taking.
-\NewDocumentEnvironment{gbox}{O{Blue} O{} +b}{%
-  \begin{generalbox}[#1][#2]#3\end{generalbox}%
+% Neutral manual box:
+%   \begin{plainbox}[Optional Title] ... \end{plainbox}
+% Unlike the color-named boxes, this stays visibly framed in \MathColorMode{none}.
+\NewDocumentEnvironment{Frame}{O{} +b}{%
+  \begin{mdframed}[style=plainboxstyle]\Math@BoxTitle{#1}#2\end{mdframed}%
 }{}
+
+
 
 % Define a reusable named style:
 %   \DefineNoteBoxStyle{MyStyle}{Teal}
@@ -908,7 +1057,7 @@
 % - No forced numbering, no forced keywords: write natural-language pseudocode.
 \NewDocumentEnvironment{pseudocode}{O{Algorithm} +b}{%
   \begin{mdframed}[style=algoboxstyle]%
-  {\textbf{\textcolor{\Math@AlgoTitleColor}{#1}}}\par\smallskip
+  {\textbf{\textcolor{\Math@AlgoboxColor}{#1}}}\par\smallskip
   {\ttfamily\small #2}%
   \end{mdframed}%
 }{}
